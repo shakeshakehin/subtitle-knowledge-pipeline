@@ -68,6 +68,7 @@ uv sync --dev
 ```dotenv
 FUSION_ACCESS_USERNAME=your-name
 FUSION_ACCESS_PASSWORD=use-a-long-random-password
+FUSION_ADMIN_TOKEN=use-an-independent-random-token-with-at-least-32-characters
 ```
 
 然后只监听回环地址，并通过提供 HTTPS 的反向代理或隧道转发：
@@ -89,6 +90,9 @@ Windows 上也可以一次启动管道网站、评测页面和临时 Tunnel；�
 外网模式会启用站内登录与 12 小时安全会话、限制等待／运行任务数量、锁定模型 Base URL 与报告 Provider、禁止网页
 覆盖服务器的 Obsidian 路径，并对生成 HTML 添加浏览器沙箱和安全响应头。临时 Tunnel 地址会变化；长期
 作品展示应改用带域名、访问策略和持久化配置的正式部署。不要把无 TLS 的端口直接映射到公网。
+
+配置 `FUSION_ADMIN_TOKEN` 后，可以使用 `/login#admin=<token>` 建立 30 天管理员会话。浏览器会在请求前
+从地址栏移除片段，Token 不会发送到反向代理日志；该链接本身等同管理员密码，不要公开分享。
 
 网页支持 B 站链接或本地字幕，并可单独选择“知识树”“详细总结”或同时生成。两者同时生成时，
 点击左侧树节点会依据共享的 `source_units` 及其字幕时间范围，在右侧详细报告中滚动并高亮对应内容。

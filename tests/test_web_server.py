@@ -8,6 +8,7 @@ from fusion_video_pipeline.web_server import (
     WebAccess,
     basic_auth_matches,
     session_cookie_matches,
+    session_cookie_role,
 )
 
 
@@ -157,3 +158,22 @@ def test_web_access_issues_and_revokes_browser_session():
     assert session_cookie_matches(cookie, access)
     access.revoke_session(token)
     assert not session_cookie_matches(cookie, access)
+
+
+def test_admin_link_issues_signed_persistent_session():
+    access = WebAccess(
+        enabled=True,
+        username="owner",
+        password="a-strong-test-password",
+        admin_token="a-long-random-administrator-token-123456",
+    )
+    assert access.issue_admin_session("wrong-token") is None
+    token = access.issue_admin_session("a-long-random-administrator-token-123456")
+    assert token
+    cookie = f"fusion_session={token}"
+    assert session_cookie_matches(cookie, access)
+    assert session_cookie_role(cookie, access) == "admin"
+
+    token_parts = token.split(".")
+    token_parts[-1] = "0" * len(token_parts[-1])
+    assert access.session_role(".".join(token_parts)) is None

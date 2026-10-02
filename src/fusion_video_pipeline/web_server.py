@@ -47,7 +47,9 @@ class WebAccess:
     enabled: bool = False
     username: str = ""
     password: str = ""
+    admin_token: str = ""
     session_seconds: int = 12 * 60 * 60
+    admin_session_seconds: int = 30 * 24 * 60 * 60
     sessions: dict[str, float] = field(default_factory=dict, repr=False)
     failed_logins: dict[str, list[float]] = field(default_factory=dict, repr=False)
     lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
@@ -58,12 +60,20 @@ class WebAccess:
             return cls()
         username = os.getenv("FUSION_ACCESS_USERNAME", "").strip()
         password = os.getenv("FUSION_ACCESS_PASSWORD", "")
+        admin_token = os.getenv("FUSION_ADMIN_TOKEN", "")
         if not username or len(password) < 16:
             raise RuntimeError(
                 "外网模式需要 FUSION_ACCESS_USERNAME，以及至少 16 个字符的 "
                 "FUSION_ACCESS_PASSWORD"
             )
-        return cls(enabled=True, username=username, password=password)
+        if admin_token and len(admin_token) < 32:
+            raise RuntimeError("FUSION_ADMIN_TOKEN 至少需要 32 个字符")
+        return cls(
+            enabled=True,
+            username=username,
+            password=password,
+            admin_token=admin_token,
+        )
 
     def issue_session(self, username: str, password: str, client_key: str) -> str | None:
         now = time.time()
@@ -83,6 +93,37 @@ class WebAccess:
             token = secrets.token_urlsafe(32)
             self.sessions[token] = now + self.session_seconds
             return token
+
+    def issue_admin_session(self, presented_token: str) -> str | None:
+        if not self.enabled or not self.admin_token or not hmac.compare_digest(
+            presented_token, self.admin_token
+        ):
+            return None
+        expires = int(time.time()) + self.admin_session_seconds
+        payload = f"admin.{expires}.{secrets.token_urlsafe(18)}"
+        signature = hmac.new(
+            self.admin_token.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256
+        ).hexdigest()
+        return f"{payload}.{signature}"
+
+    def session_role(self, token: str) -> str | None:
+        if self.admin_token and token.startswith("admin."):
+            try:
+                prefix, expires_text, nonce, signature = token.split(".", 3)
+                payload = f"{prefix}.{expires_text}.{nonce}"
+                expected = hmac.new(
+                    self.admin_token.encode("utf-8"),
+                    payload.encode("utf-8"),
+                    hashlib.sha256,
+                ).hexdigest()
+                if int(expires_text) > int(time.time()) and hmac.compare_digest(
+                    signature, expected
+                ):
+                    return "admin"
+            except (TypeError, ValueError):
+                return None
+            return None
+        return "user" if self.session_is_valid(token) else None
 
     def session_is_valid(self, token: str) -> bool:
         now = time.time()
@@ -126,7 +167,13 @@ def _session_token(cookie_header: str | None) -> str:
 
 
 def session_cookie_matches(cookie_header: str | None, access: WebAccess) -> bool:
-    return access.enabled and access.session_is_valid(_session_token(cookie_header))
+    return access.enabled and access.session_role(_session_token(cookie_header)) is not None
+
+
+def session_cookie_role(cookie_header: str | None, access: WebAccess) -> str | None:
+    if not access.enabled:
+        return "admin"
+    return access.session_role(_session_token(cookie_header))
 
 
 def _read_json(path: Path) -> dict:
@@ -472,10 +519,15 @@ class WebHandler(BaseHTTPRequestHandler):
         if not allow_embedding:
             self.send_header("X-Frame-Options", "SAMEORIGIN")
 
+    def _access_role(self) -> str | None:
+        if not self.access.enabled:
+            return "admin"
+        if basic_auth_matches(self.headers.get("Authorization"), self.access):
+            return "user"
+        return session_cookie_role(self.headers.get("Cookie"), self.access)
+
     def _is_authenticated(self) -> bool:
-        return basic_auth_matches(
-            self.headers.get("Authorization"), self.access
-        ) or session_cookie_matches(self.headers.get("Cookie"), self.access)
+        return self._access_role() is not None
 
     def _authenticate(self, *, api: bool = False) -> bool:
         if self._is_authenticated():
@@ -574,6 +626,7 @@ class WebHandler(BaseHTTPRequestHandler):
                     "report_api_key_configured": bool(settings.report_api_key),
                     "obsidian_root": "" if self.manager.public_mode else str(settings.obsidian_root),
                     "public_mode": self.manager.public_mode,
+                    "access_role": self._access_role(),
                 }
             )
             return
@@ -673,6 +726,27 @@ class WebHandler(BaseHTTPRequestHandler):
                     "HttpOnly; Secure; SameSite=Strict"
                 )
                 self._json({"ok": True}, headers={"Set-Cookie": cookie})
+            except (ValueError, json.JSONDecodeError) as exc:
+                self._error(HTTPStatus.BAD_REQUEST, str(exc))
+            return
+        if path == "/api/admin-login":
+            try:
+                if int(self.headers.get("Content-Length", "0")) > 8192:
+                    raise ValueError("请求内容过大")
+                payload = self._body()
+                token = self.access.issue_admin_session(str(payload.get("token") or ""))
+                if not token:
+                    self._error(HTTPStatus.UNAUTHORIZED, "管理员直达链接无效")
+                    return
+                cookie = (
+                    f"fusion_session={token}; Path=/; "
+                    f"Max-Age={self.access.admin_session_seconds}; "
+                    "HttpOnly; Secure; SameSite=Strict"
+                )
+                self._json(
+                    {"ok": True, "role": "admin"},
+                    headers={"Set-Cookie": cookie},
+                )
             except (ValueError, json.JSONDecodeError) as exc:
                 self._error(HTTPStatus.BAD_REQUEST, str(exc))
             return
