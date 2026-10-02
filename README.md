@@ -1,15 +1,15 @@
 # Fusion Video Pipeline
 
-把 B 站现有字幕或本地字幕转换为可快速浏览的知识树与详细阅读报告，并可选择归档到 Obsidian。
-项目以个人 v7 管道为结构化笔记基线，并将
-[`imexlovery/video-report-agent`](https://github.com/imexlovery/video-report-agent) 作为外部依赖接入。
+把 B 站现有字幕或本地字幕转换为可快速浏览的层级知识树，并可选择归档到 Obsidian。
+本仓库的核心实现是以个人 v7 管道为基线的知识树生成、校验、交互与评测；详细阅读报告则通过
+[`imexlovery/video-report-agent`](https://github.com/imexlovery/video-report-agent) 这一外部依赖接入。
 一份带来源 ID 的 canonical transcript 同时产出：
 
 1. v7 风格的树形 Markdown 笔记与确定性 SVG/PNG 导图；
-2. 可交互 HTML 阅读报告与长 PNG；
+2. 外部报告依赖生成的可交互 HTML 阅读报告与长 PNG；
 3. 一套统一归档到 Obsidian 的成品与可追溯素材。
 
-![知识树与详细报告联动](docs/linked-tree-preview.png)
+![知识树局部预览：主题、主分支与多层父子节点](docs/knowledge-tree-preview.png)
 
 ## 项目特点
 
