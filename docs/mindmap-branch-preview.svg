@@ -1,0 +1,357 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="450 880 1280 900">
+<rect x="450" y="880" width="1280" height="900" fill="#f7f8f6"/>
+<text x="42" y="38" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="16" fill="#66737c">FUSION TREE · 像素宽度排版 · 显式父子关系</text>
+<path d="M 459.2 1928.0 C 482.2 1928.0, 482.2 250.5, 505.2 250.5" fill="none" stroke="#e87352" stroke-width="3" opacity=".66"/>
+<path d="M 459.2 1928.0 C 482.2 1928.0, 482.2 1101.5, 505.2 1101.5" fill="none" stroke="#2e8b83" stroke-width="3" opacity=".66"/>
+<path d="M 459.2 1928.0 C 482.2 1928.0, 482.2 2053.5, 505.2 2053.5" fill="none" stroke="#b47b26" stroke-width="3" opacity=".66"/>
+<path d="M 459.2 1928.0 C 482.2 1928.0, 482.2 2501.5, 505.2 2501.5" fill="none" stroke="#6d63a8" stroke-width="3" opacity=".66"/>
+<path d="M 459.2 1928.0 C 482.2 1928.0, 482.2 2893.5, 505.2 2893.5" fill="none" stroke="#39749b" stroke-width="3" opacity=".66"/>
+<path d="M 459.2 1928.0 C 482.2 1928.0, 482.2 3240.5, 505.2 3240.5" fill="none" stroke="#8c5b68" stroke-width="3" opacity=".66"/>
+<path d="M 459.2 1928.0 C 482.2 1928.0, 482.2 3574.0, 505.2 3574.0" fill="none" stroke="#455a64" stroke-width="3" opacity=".66"/>
+<path d="M 861.2 250.5 C 886.0 250.5, 886.0 138.5, 910.8 138.5" fill="none" stroke="#e87352" stroke-width="1.8" opacity=".66"/>
+<path d="M 861.2 250.5 C 886.0 250.5, 886.0 261.5, 910.8 261.5" fill="none" stroke="#e87352" stroke-width="1.8" opacity=".66"/>
+<path d="M 861.2 250.5 C 886.0 250.5, 886.0 373.5, 910.8 373.5" fill="none" stroke="#e87352" stroke-width="1.8" opacity=".66"/>
+<path d="M 864.8 1101.5 C 887.8 1101.5, 887.8 653.5, 910.8 653.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 864.8 1101.5 C 887.8 1101.5, 887.8 1101.5, 910.8 1101.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 864.8 1101.5 C 887.8 1101.5, 887.8 1493.5, 910.8 1493.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 864.8 1101.5 C 887.8 1101.5, 887.8 1717.5, 910.8 1717.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 1281.2 653.5 C 1309.0 653.5, 1309.0 485.5, 1336.8 485.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 1281.2 653.5 C 1309.0 653.5, 1309.0 597.5, 1336.8 597.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 1281.2 653.5 C 1309.0 653.5, 1309.0 709.5, 1336.8 709.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 1281.2 653.5 C 1309.0 653.5, 1309.0 821.5, 1336.8 821.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 1281.2 1101.5 C 1309.0 1101.5, 1309.0 933.5, 1336.8 933.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 1281.2 1101.5 C 1309.0 1101.5, 1309.0 1045.5, 1336.8 1045.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 1281.2 1101.5 C 1309.0 1101.5, 1309.0 1157.5, 1336.8 1157.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 1281.2 1101.5 C 1309.0 1101.5, 1309.0 1269.5, 1336.8 1269.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 1286.0 1493.5 C 1311.4 1493.5, 1311.4 1381.5, 1336.8 1381.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 1286.0 1493.5 C 1311.4 1493.5, 1311.4 1493.5, 1336.8 1493.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 1286.0 1493.5 C 1311.4 1493.5, 1311.4 1605.5, 1336.8 1605.5" fill="none" stroke="#2e8b83" stroke-width="1.8" opacity=".66"/>
+<path d="M 864.1 2053.5 C 887.4 2053.5, 887.4 2053.5, 910.8 2053.5" fill="none" stroke="#b47b26" stroke-width="1.8" opacity=".66"/>
+<path d="M 1278.2 2053.5 C 1307.5 2053.5, 1307.5 1829.5, 1336.8 1829.5" fill="none" stroke="#b47b26" stroke-width="1.8" opacity=".66"/>
+<path d="M 1278.2 2053.5 C 1307.5 2053.5, 1307.5 1941.5, 1336.8 1941.5" fill="none" stroke="#b47b26" stroke-width="1.8" opacity=".66"/>
+<path d="M 1278.2 2053.5 C 1307.5 2053.5, 1307.5 2053.5, 1336.8 2053.5" fill="none" stroke="#b47b26" stroke-width="1.8" opacity=".66"/>
+<path d="M 1278.2 2053.5 C 1307.5 2053.5, 1307.5 2165.5, 1336.8 2165.5" fill="none" stroke="#b47b26" stroke-width="1.8" opacity=".66"/>
+<path d="M 1278.2 2053.5 C 1307.5 2053.5, 1307.5 2277.5, 1336.8 2277.5" fill="none" stroke="#b47b26" stroke-width="1.8" opacity=".66"/>
+<path d="M 1716.8 2277.5 C 1739.8 2277.5, 1739.8 2277.5, 1762.8 2277.5" fill="none" stroke="#b47b26" stroke-width="1.8" opacity=".66"/>
+<path d="M 852.6 2501.5 C 881.7 2501.5, 881.7 2445.5, 910.8 2445.5" fill="none" stroke="#6d63a8" stroke-width="1.8" opacity=".66"/>
+<path d="M 852.6 2501.5 C 881.7 2501.5, 881.7 2613.5, 910.8 2613.5" fill="none" stroke="#6d63a8" stroke-width="1.8" opacity=".66"/>
+<path d="M 1277.0 2445.5 C 1306.9 2445.5, 1306.9 2389.5, 1336.8 2389.5" fill="none" stroke="#6d63a8" stroke-width="1.8" opacity=".66"/>
+<path d="M 1277.0 2445.5 C 1306.9 2445.5, 1306.9 2501.5, 1336.8 2501.5" fill="none" stroke="#6d63a8" stroke-width="1.8" opacity=".66"/>
+<path d="M 1288.4 2613.5 C 1312.6 2613.5, 1312.6 2613.5, 1336.8 2613.5" fill="none" stroke="#6d63a8" stroke-width="1.8" opacity=".66"/>
+<path d="M 854.0 2893.5 C 882.4 2893.5, 882.4 2781.5, 910.8 2781.5" fill="none" stroke="#39749b" stroke-width="1.8" opacity=".66"/>
+<path d="M 854.0 2893.5 C 882.4 2893.5, 882.4 3005.5, 910.8 3005.5" fill="none" stroke="#39749b" stroke-width="1.8" opacity=".66"/>
+<path d="M 1283.6 2781.5 C 1310.2 2781.5, 1310.2 2725.5, 1336.8 2725.5" fill="none" stroke="#39749b" stroke-width="1.8" opacity=".66"/>
+<path d="M 1283.6 2781.5 C 1310.2 2781.5, 1310.2 2837.5, 1336.8 2837.5" fill="none" stroke="#39749b" stroke-width="1.8" opacity=".66"/>
+<path d="M 1289.6 3005.5 C 1313.2 3005.5, 1313.2 2949.5, 1336.8 2949.5" fill="none" stroke="#39749b" stroke-width="1.8" opacity=".66"/>
+<path d="M 1289.6 3005.5 C 1313.2 3005.5, 1313.2 3061.5, 1336.8 3061.5" fill="none" stroke="#39749b" stroke-width="1.8" opacity=".66"/>
+<path d="M 717.2 3240.5 C 814.0 3240.5, 814.0 3184.5, 910.8 3184.5" fill="none" stroke="#8c5b68" stroke-width="1.8" opacity=".66"/>
+<path d="M 717.2 3240.5 C 814.0 3240.5, 814.0 3307.5, 910.8 3307.5" fill="none" stroke="#8c5b68" stroke-width="1.8" opacity=".66"/>
+<path d="M 1289.0 3184.5 C 1312.9 3184.5, 1312.9 3184.5, 1336.8 3184.5" fill="none" stroke="#8c5b68" stroke-width="1.8" opacity=".66"/>
+<path d="M 690.2 3574.0 C 800.5 3574.0, 800.5 3413.5, 910.8 3413.5" fill="none" stroke="#455a64" stroke-width="1.8" opacity=".66"/>
+<path d="M 690.2 3574.0 C 800.5 3574.0, 800.5 3524.0, 910.8 3524.0" fill="none" stroke="#455a64" stroke-width="1.8" opacity=".66"/>
+<path d="M 690.2 3574.0 C 800.5 3574.0, 800.5 3645.0, 910.8 3645.0" fill="none" stroke="#455a64" stroke-width="1.8" opacity=".66"/>
+<path d="M 690.2 3574.0 C 800.5 3574.0, 800.5 3745.0, 910.8 3745.0" fill="none" stroke="#455a64" stroke-width="1.8" opacity=".66"/>
+<g data-node-id="root">
+<rect x="42.0" y="1847.0" width="417.2" height="162.0" rx="12" fill="#17324d" stroke="#17324d" stroke-width="1.4"/>
+<text x="57.0" y="1881.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="24" font-weight="600" fill="#ffffff">看懂六个术语，搭出能干活的 Age</text>
+<text x="57.0" y="1912.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="24" font-weight="600" fill="#ffffff">nt 系统</text>
+<text x="57.0" y="1948.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#d9e7f2">模型只是脑子，真正决定 Agent 能否交付的是 AGENT</text>
+<text x="57.0" y="1970.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#d9e7f2">S.md、Skill、Memory、MCP、A2A 与 Sub Agent 组</text>
+<text x="57.0" y="1992.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#d9e7f2">成的系统及其使用边界。</text>
+</g>
+<g data-node-id="section-1">
+<rect x="505.2" y="214.5" width="356.0" height="72.0" rx="12" fill="#e87352" stroke="#e87352" stroke-width="1.4"/>
+<text x="520.2" y="243.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="18" font-weight="600" fill="#ffffff">总命题：模型只是脑子，系统决定交付</text>
+</g>
+<g data-node-id="b1-p1">
+<rect x="910.8" y="78.0" width="379.4" height="121.0" rx="12" fill="#ffffff" stroke="#e87352" stroke-width="2"/>
+<text x="925.8" y="103.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">六个术语搭起 Agent</text>
+<text x="925.8" y="129.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">看懂 AGENTS.md、Skill、MCP、Memory、A2A</text>
+<text x="925.8" y="151.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">、Sub Agent，就能理解多数 Agent 系统如何搭</text>
+<text x="925.8" y="173.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">建。</text>
+</g>
+<g data-node-id="b1-p2">
+<rect x="910.8" y="212.0" width="380.0" height="99.0" rx="12" fill="#ffffff" stroke="#e87352" stroke-width="2"/>
+<text x="925.8" y="237.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">模型只是脑子</text>
+<text x="925.8" y="263.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">模型像聪明新人，还需要规矩、工具、权限和项目</text>
+<text x="925.8" y="285.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">背景，才能把活干完。</text>
+</g>
+<g data-node-id="b1-p3">
+<rect x="910.8" y="324.0" width="370.4" height="99.0" rx="12" fill="#ffffff" stroke="#e87352" stroke-width="2"/>
+<text x="925.8" y="349.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">差距在模型外系统</text>
+<text x="925.8" y="375.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">Agent 的差距不只是模型排行榜，模型外系统决</text>
+<text x="925.8" y="397.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">定它会聊天还是能交付。</text>
+</g>
+<g data-node-id="section-2">
+<rect x="505.2" y="1064.5" width="359.6" height="74.0" rx="12" fill="#2e8b83" stroke="#2e8b83" stroke-width="1.4"/>
+<text x="520.2" y="1093.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="18" font-weight="600" fill="#ffffff">Agent 自身基础：AGENTS.md、Skill</text>
+<text x="520.2" y="1118.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="18" font-weight="600" fill="#ffffff"> 与 Memory</text>
+</g>
+<g data-node-id="b2-p1">
+<rect x="910.8" y="604.0" width="370.4" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="925.8" y="629.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">AGENTS.md 是项目说明书</text>
+<text x="925.8" y="655.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">它是普通文本文件，放在项目根目录，Agent 进</text>
+<text x="925.8" y="677.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">来会先读，了解项目如何运转。</text>
+</g>
+<g data-node-id="b2-p2">
+<rect x="1336.8" y="436.0" width="380.0" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="1351.8" y="461.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">写清项目运行规则</text>
+<text x="1351.8" y="487.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">里面写项目怎么启动、测试跑哪条命令、代码风格</text>
+<text x="1351.8" y="509.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">、哪些文件不能动、提交信息怎么写。</text>
+</g>
+<g data-node-id="b2-p3">
+<rect x="1336.8" y="548.0" width="378.8" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="1351.8" y="573.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">不写规矩只能靠猜</text>
+<text x="1351.8" y="599.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">抱怨 Agent 笨，常因没人告诉它项目如何运转，</text>
+<text x="1351.8" y="621.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">而不是它本身不聪明。</text>
+</g>
+<g data-node-id="b2-p4">
+<rect x="1336.8" y="660.0" width="380.0" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="1351.8" y="685.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">规则可以分层配置</text>
+<text x="1351.8" y="711.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">根目录放总规则，子目录放子规则，离任务最近的</text>
+<text x="1351.8" y="733.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">规则优先。</text>
+</g>
+<g data-node-id="b2-p5">
+<rect x="1336.8" y="772.0" width="367.4" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="1351.8" y="797.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">完善它是高回报投入</text>
+<text x="1351.8" y="823.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">完善 AGENTS.md 是成本最低、回报最高的一项</text>
+<text x="1351.8" y="845.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">投入。</text>
+</g>
+<g data-node-id="b2-p6">
+<rect x="910.8" y="1052.0" width="370.4" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="925.8" y="1077.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">Skill 解决按需手艺问题</text>
+<text x="925.8" y="1103.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">Skill 不是规矩问题，而是把不常用能力按需调</text>
+<text x="925.8" y="1125.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">用，用时就拿下来。</text>
+</g>
+<g data-node-id="b2-p7">
+<rect x="1336.8" y="884.0" width="368.6" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="1351.8" y="909.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">适合不常用的能力</text>
+<text x="1351.8" y="935.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">如做 PPT、处理表格、写特定格式报告、生成固</text>
+<text x="1351.8" y="957.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">定风格图片。</text>
+</g>
+<g data-node-id="b2-p8">
+<rect x="1336.8" y="996.0" width="367.4" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="1351.8" y="1021.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">全塞上下文会占满脑子</text>
+<text x="1351.8" y="1047.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">简单改文案也要背整套 PPT 手册，Agent 的上</text>
+<text x="1351.8" y="1069.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">下文会被无关技能占满。</text>
+</g>
+<g data-node-id="b2-p9">
+<rect x="1336.8" y="1108.0" width="372.8" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="1351.8" y="1133.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">Skill 是含说明的文件夹</text>
+<text x="1351.8" y="1159.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">一个 Skill 通常是文件夹，内有 SKILL.md 说</text>
+<text x="1351.8" y="1181.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">明技能与调用时机，也可放脚本、模板、素材。</text>
+</g>
+<g data-node-id="b2-p10">
+<rect x="1336.8" y="1220.0" width="370.4" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="1351.8" y="1245.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">Skill 不是越多越强</text>
+<text x="1351.8" y="1271.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">几十个技能全挂上反而更笨；Skill 应像工具墙</text>
+<text x="1351.8" y="1293.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">，不是杂物堆。</text>
+</g>
+<g data-node-id="b2-p11">
+<rect x="910.8" y="1444.0" width="375.2" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="925.8" y="1469.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">Memory 解决跨会话记忆</text>
+<text x="925.8" y="1495.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">上下文窗口只是当下工作台，关闭后会丢失；Mem</text>
+<text x="925.8" y="1517.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">ory 管 Agent 明天还记不记得你。</text>
+</g>
+<g data-node-id="b2-p12">
+<rect x="1336.8" y="1332.0" width="380.0" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="1351.8" y="1357.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">好 Agent 会记住偏好</text>
+<text x="1351.8" y="1383.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">慢慢记住偏好、项目背景、工作方式、验证过的规</text>
+<text x="1351.8" y="1405.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">则和不要重复的事。</text>
+</g>
+<g data-node-id="b2-p13">
+<rect x="1336.8" y="1444.0" width="380.0" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="1351.8" y="1469.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">Memory 最难是忘掉</text>
+<text x="1351.8" y="1495.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">什么都塞会带来过期信息、错误判断和互相打架的</text>
+<text x="1351.8" y="1517.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">规则，越用越糊涂。</text>
+</g>
+<g data-node-id="b2-p14">
+<rect x="1336.8" y="1556.0" width="380.0" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="1351.8" y="1581.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">好 Memory 要准、能更新、能删</text>
+<text x="1351.8" y="1607.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">不是记得越多越好，而是记得准、更新得动、也删</text>
+<text x="1351.8" y="1629.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">得掉。</text>
+</g>
+<g data-node-id="b2-p15">
+<rect x="910.8" y="1668.0" width="373.4" height="99.0" rx="12" fill="#ffffff" stroke="#2e8b83" stroke-width="2"/>
+<text x="925.8" y="1693.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">前三者解决 Agent 自身问题</text>
+<text x="925.8" y="1719.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">AGENTS.md、Skill 和 Memory 更多在解决 Ag</text>
+<text x="925.8" y="1741.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">ent 自己身上的能力问题。</text>
+</g>
+<g data-node-id="section-3">
+<rect x="505.2" y="2016.5" width="358.9" height="74.0" rx="12" fill="#b47b26" stroke="#b47b26" stroke-width="1.4"/>
+<text x="520.2" y="2045.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="18" font-weight="600" fill="#ffffff">工具连接：MCP 让 Agent 从动嘴到动</text>
+<text x="520.2" y="2070.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="18" font-weight="600" fill="#ffffff">手</text>
+</g>
+<g data-node-id="b3-p1">
+<rect x="910.8" y="2004.0" width="367.4" height="99.0" rx="12" fill="#ffffff" stroke="#b47b26" stroke-width="2"/>
+<text x="925.8" y="2029.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">MCP 是统一插座</text>
+<text x="925.8" y="2055.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">MCP 管 Agent 和工具怎么连接，把外部工具接</text>
+<text x="925.8" y="2077.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">入标准化。</text>
+</g>
+<g data-node-id="b3-p2">
+<rect x="1336.8" y="1780.0" width="370.4" height="99.0" rx="12" fill="#ffffff" stroke="#b47b26" stroke-width="2"/>
+<text x="1351.8" y="1805.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">干活必须连接外部工具</text>
+<text x="1351.8" y="1831.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">Agent 不能只在聊天框说，还要查数据库、读文</text>
+<text x="1351.8" y="1853.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">件、连服务、调接口和操作工具。</text>
+</g>
+<g data-node-id="b3-p3">
+<rect x="1336.8" y="1892.0" width="380.0" height="99.0" rx="12" fill="#ffffff" stroke="#b47b26" stroke-width="2"/>
+<text x="1351.8" y="1917.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">接口不同导致适配爆炸</text>
+<text x="1351.8" y="1943.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">每个工具接口都不同，接十个工具要十套适配，做</text>
+<text x="1351.8" y="1965.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">一百个要一百套，非常乱。</text>
+</g>
+<g data-node-id="b3-p4">
+<rect x="1336.8" y="2004.0" width="371.0" height="99.0" rx="12" fill="#ffffff" stroke="#b47b26" stroke-width="2"/>
+<text x="1351.8" y="2029.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">工具侧提供 MCP Server</text>
+<text x="1351.8" y="2055.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">工具提供 MCP 服务器，Agent 只要会说 MCP，</text>
+<text x="1351.8" y="2077.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">就能调用外部工具。</text>
+</g>
+<g data-node-id="b3-p5">
+<rect x="1336.8" y="2116.0" width="377.0" height="99.0" rx="12" fill="#ffffff" stroke="#b47b26" stroke-width="2"/>
+<text x="1351.8" y="2141.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">MCP 让 Agent 动手</text>
+<text x="1351.8" y="2167.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">以前只能告诉你怎么做，有了 MCP 就能去做、去</text>
+<text x="1351.8" y="2189.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">改、去提交、去调用。</text>
+</g>
+<g data-node-id="b3-p6">
+<rect x="1336.8" y="2228.0" width="380.0" height="99.0" rx="12" fill="#ffffff" stroke="#b47b26" stroke-width="2"/>
+<text x="1351.8" y="2253.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">接工具本质是发钥匙</text>
+<text x="1351.8" y="2279.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">能查数据库、改文件、发消息、操作线上系统，钥</text>
+<text x="1351.8" y="2301.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">匙越多能力越强，风险越大。</text>
+</g>
+<g data-node-id="b3-p7">
+<rect x="1762.8" y="2228.0" width="368.6" height="99.0" rx="12" fill="#ffffff" stroke="#b47b26" stroke-width="2"/>
+<text x="1777.8" y="2253.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">权限安全必须一起设计</text>
+<text x="1777.8" y="2279.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">MCP 很重要，但权限、安全和确认机制必须同步</text>
+<text x="1777.8" y="2301.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">考虑，不能只发钥匙。</text>
+</g>
+<g data-node-id="section-4">
+<rect x="505.2" y="2464.5" width="347.4" height="74.0" rx="12" fill="#6d63a8" stroke="#6d63a8" stroke-width="1.4"/>
+<text x="520.2" y="2493.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="18" font-weight="600" fill="#ffffff">Agent 协作：A2A 与多 Agent 的边</text>
+<text x="520.2" y="2518.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="18" font-weight="600" fill="#ffffff">界</text>
+</g>
+<g data-node-id="b4-p1">
+<rect x="910.8" y="2396.0" width="366.2" height="99.0" rx="12" fill="#ffffff" stroke="#6d63a8" stroke-width="2"/>
+<text x="925.8" y="2421.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">A2A 管 Agent 间协作</text>
+<text x="925.8" y="2447.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">A2A 管 Agent 和 Agent 怎么连接、协作，区</text>
+<text x="925.8" y="2469.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">别于 MCP 管 Agent 接工具。</text>
+</g>
+<g data-node-id="b4-p2">
+<rect x="1336.8" y="2340.0" width="378.8" height="99.0" rx="12" fill="#ffffff" stroke="#6d63a8" stroke-width="2"/>
+<text x="1351.8" y="2365.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">A2A 像递名片</text>
+<text x="1351.8" y="2391.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">每个 Agent 亮出自己是谁、能干什么、任务该怎</text>
+<text x="1351.8" y="2413.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">么交给我。</text>
+</g>
+<g data-node-id="b4-p3">
+<rect x="1336.8" y="2452.0" width="378.8" height="99.0" rx="12" fill="#ffffff" stroke="#6d63a8" stroke-width="2"/>
+<text x="1351.8" y="2477.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">流水线需要任务交接</text>
+<text x="1351.8" y="2503.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">选题、写稿、配图、检查发布格式由不同 Agent </text>
+<text x="1351.8" y="2525.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">负责，要知道彼此任务、交接和结果返回。</text>
+</g>
+<g data-node-id="b4-p4">
+<rect x="910.8" y="2564.0" width="377.6" height="99.0" rx="12" fill="#ffffff" stroke="#6d63a8" stroke-width="2"/>
+<text x="925.8" y="2589.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">多 Agent 被高估</text>
+<text x="925.8" y="2615.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">酷炫多 Agent 演示之外，一个 Agent 配齐工具</text>
+<text x="925.8" y="2637.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">可能更稳、更便宜地完成。</text>
+</g>
+<g data-node-id="b4-p5">
+<rect x="1336.8" y="2564.0" width="380.0" height="99.0" rx="12" fill="#ffffff" stroke="#6d63a8" stroke-width="2"/>
+<text x="1351.8" y="2589.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">任务真拆得开才上 A2A</text>
+<text x="1351.8" y="2615.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">只有任务真拆得开、角色真不一样、流程真需要交</text>
+<text x="1351.8" y="2637.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">接，才值得上 A2A，否则只会增加协调复杂度。</text>
+</g>
+<g data-node-id="section-5">
+<rect x="505.2" y="2856.5" width="348.8" height="74.0" rx="12" fill="#39749b" stroke="#39749b" stroke-width="1.4"/>
+<text x="520.2" y="2885.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="18" font-weight="600" fill="#ffffff">任务分身：Sub Agent 解决装不下与</text>
+<text x="520.2" y="2910.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="18" font-weight="600" fill="#ffffff">等不起</text>
+</g>
+<g data-node-id="b5-p1">
+<rect x="910.8" y="2732.0" width="372.8" height="99.0" rx="12" fill="#ffffff" stroke="#39749b" stroke-width="2"/>
+<text x="925.8" y="2757.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">Sub Agent 是分身</text>
+<text x="925.8" y="2783.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">Sub Agent 即子 Agent 或分身，适合任务太大</text>
+<text x="925.8" y="2805.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">或上下文装不下的情况。</text>
+</g>
+<g data-node-id="b5-p2">
+<rect x="1336.8" y="2676.0" width="377.6" height="99.0" rx="12" fill="#ffffff" stroke="#39749b" stroke-width="2"/>
+<text x="1351.8" y="2701.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">派子 Agent 读剧本</text>
+<text x="1351.8" y="2727.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">读几百集剧本时，主 Agent 派子 Agent 读完，</text>
+<text x="1351.8" y="2749.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">返回人物关系和时间线概要。</text>
+</g>
+<g data-node-id="b5-p3">
+<rect x="1336.8" y="2788.0" width="377.0" height="99.0" rx="12" fill="#ffffff" stroke="#39749b" stroke-width="2"/>
+<text x="1351.8" y="2813.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">并行改造多平台版本</text>
+<text x="1351.8" y="2839.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">同一篇文章改成八个平台版本可构建多个子 Agen</text>
+<text x="1351.8" y="2861.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">t 同时做，比串行快很多。</text>
+</g>
+<g data-node-id="b5-p4">
+<rect x="910.8" y="2956.0" width="378.8" height="99.0" rx="12" fill="#ffffff" stroke="#39749b" stroke-width="2"/>
+<text x="925.8" y="2981.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">主 Agent 像主管</text>
+<text x="925.8" y="3007.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">主 Agent 不必亲自做完所有细节，而是拆出任务</text>
+<text x="925.8" y="3029.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">，再把结果回收回来。</text>
+</g>
+<g data-node-id="b5-p5">
+<rect x="1336.8" y="2900.0" width="380.0" height="99.0" rx="12" fill="#ffffff" stroke="#39749b" stroke-width="2"/>
+<text x="1351.8" y="2925.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">Sub Agent 最易滥用</text>
+<text x="1351.8" y="2951.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">拆太细会让协调、合并、检查比原来更麻烦；不是</text>
+<text x="1351.8" y="2973.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">所有事都值得拆。</text>
+</g>
+<g data-node-id="b5-p6">
+<rect x="1336.8" y="3012.0" width="374.0" height="99.0" rx="12" fill="#ffffff" stroke="#39749b" stroke-width="2"/>
+<text x="1351.8" y="3037.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">解决装不下或等不起</text>
+<text x="1351.8" y="3063.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">Sub Agent 解决的是上下文装不下或任务等不起</text>
+<text x="1351.8" y="3085.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">，不是用来炫技。</text>
+</g>
+<g data-node-id="section-6">
+<rect x="505.2" y="3204.5" width="212.0" height="72.0" rx="12" fill="#8c5b68" stroke="#8c5b68" stroke-width="1.4"/>
+<text x="520.2" y="3233.1" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="18" font-weight="600" fill="#ffffff">系统整合与搭建自查</text>
+</g>
+<g data-node-id="b6-p1">
+<rect x="910.8" y="3124.0" width="378.2" height="121.0" rx="12" fill="#ffffff" stroke="#8c5b68" stroke-width="2"/>
+<text x="925.8" y="3149.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">六项各司其职拼成系统</text>
+<text x="925.8" y="3175.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">AGENTS.md 立规矩、Skill 讲手艺、Memory 讲</text>
+<text x="925.8" y="3197.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">记忆、MCP 工具调用、A2A 协作、Sub Agent </text>
+<text x="925.8" y="3219.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">分身并行；六样拼起来才能干活。</text>
+</g>
+<g data-node-id="b6-p2">
+<rect x="1336.8" y="3124.0" width="380.0" height="121.0" rx="12" fill="#ffffff" stroke="#8c5b68" stroke-width="2"/>
+<text x="1351.8" y="3149.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">模型外系统决定交付</text>
+<text x="1351.8" y="3175.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">模型决定脑子是否聪明；规矩、按需技能、可靠记</text>
+<text x="1351.8" y="3197.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">忆、工具接入、协作必要性和任务拆分决定能否交</text>
+<text x="1351.8" y="3219.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">付。</text>
+</g>
+<g data-node-id="b6-p3">
+<rect x="910.8" y="3258.0" width="378.8" height="99.0" rx="12" fill="#ffffff" stroke="#8c5b68" stroke-width="2"/>
+<text x="925.8" y="3283.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">搭建先自查缺哪样</text>
+<text x="925.8" y="3309.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">给自己搭 Agent 时别一上来纠结模型，先问六样</text>
+<text x="925.8" y="3331.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#52636d">里到底缺哪一样。</text>
+</g>
+<g data-node-id="summary">
+<rect x="505.2" y="3538.0" width="185.0" height="72.0" rx="12" fill="#455a64" stroke="#455a64" stroke-width="1.4"/>
+<text x="520.2" y="3566.6" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="18" font-weight="600" fill="#ffffff">总结</text>
+</g>
+<g data-node-id="summary-1">
+<rect x="910.8" y="3370.0" width="377.0" height="87.0" rx="12" fill="#ffffff" stroke="#455a64" stroke-width="2"/>
+<text x="925.8" y="3395.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">模型像聪明的脑子，但只靠模型无法交付；Agent</text>
+<text x="925.8" y="3416.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944"> 还需要项目规矩、按需技能、可靠记忆、工具接</text>
+<text x="925.8" y="3437.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">入、协作机制和任务拆分。</text>
+</g>
+<g data-node-id="summary-2">
+<rect x="910.8" y="3470.0" width="377.0" height="108.0" rx="12" fill="#ffffff" stroke="#455a64" stroke-width="2"/>
+<text x="925.8" y="3495.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">AGENTS.md、Skill 与 Memory 解决 Agent 自</text>
+<text x="925.8" y="3516.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">身问题：立规矩、讲手艺、管记忆，其中完善 AG</text>
+<text x="925.8" y="3537.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">ENTS.md 成本最低回报最高，Skill 与 Memory</text>
+<text x="925.8" y="3558.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944"> 都强调按需与可清理。</text>
+</g>
+<g data-node-id="summary-3">
+<rect x="910.8" y="3591.0" width="377.0" height="108.0" rx="12" fill="#ffffff" stroke="#455a64" stroke-width="2"/>
+<text x="925.8" y="3616.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">MCP、A2A 与 Sub Agent 处理外部连接与任务</text>
+<text x="925.8" y="3637.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">组织：MCP 统一工具，A2A 连接 Agent，Sub A</text>
+<text x="925.8" y="3658.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">gent 解决装不下和等不起，但权限、协作和拆分</text>
+<text x="925.8" y="3679.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">都有边界。</text>
+</g>
+<g data-node-id="summary-4">
+<rect x="910.8" y="3712.0" width="378.8" height="66.0" rx="12" fill="#ffffff" stroke="#455a64" stroke-width="2"/>
+<text x="925.8" y="3737.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">搭建 Agent 时先检查六个术语里缺哪一样，而不</text>
+<text x="925.8" y="3758.8" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" font-weight="600" fill="#263944">是一上来纠结模型。</text>
+</g>
+<text x="2131" y="3834" text-anchor="end" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="13" fill="#7e898f">逻辑型 · 深度 5</text>
+</svg>

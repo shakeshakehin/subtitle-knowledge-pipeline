@@ -139,6 +139,35 @@ def test_public_mode_locks_server_controlled_endpoints_and_paths(tmp_path):
         manager.executor.shutdown(wait=False, cancel_futures=True)
 
 
+def test_official_deepseek_request_key_is_shared_between_outputs(tmp_path):
+    configured = Settings(
+        project_root=tmp_path,
+        note_base_url="https://api.deepseek.com",
+        note_model="deepseek-flash",
+        note_api_key="stale-tree-key",
+        report_provider="deepseek",
+        report_model="deepseek-flash",
+        report_api_key="stale-report-key",
+        obsidian_root=tmp_path / "vault",
+        credential_path=tmp_path / "credential.json",
+    )
+    manager = JobManager(configured, public_mode=True)
+    try:
+        from_tree_field = manager.request_settings(
+            {"models": {"note_api_key": "fresh-official-key"}}
+        )
+        assert from_tree_field.note_api_key == "fresh-official-key"
+        assert from_tree_field.report_api_key == "fresh-official-key"
+
+        from_report_field = manager.request_settings(
+            {"models": {"report_api_key": "another-fresh-key"}}
+        )
+        assert from_report_field.note_api_key == "another-fresh-key"
+        assert from_report_field.report_api_key == "another-fresh-key"
+    finally:
+        manager.executor.shutdown(wait=False, cancel_futures=True)
+
+
 def test_basic_auth_uses_exact_username_and_password():
     access = WebAccess(enabled=True, username="owner", password="a-strong-test-password")
     encoded = base64.b64encode(b"owner:a-strong-test-password").decode("ascii")

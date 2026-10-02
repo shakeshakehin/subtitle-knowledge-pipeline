@@ -276,14 +276,31 @@ class JobManager:
             if self.public_mode
             else Path(str(payload.get("obsidian_root") or self.settings.obsidian_root)).expanduser()
         )
+        requested_note_key = str(custom.get("note_api_key") or "").strip()
+        requested_report_key = str(custom.get("report_api_key") or "").strip()
+        shared_official_deepseek = (
+            report_provider.casefold() == "deepseek"
+            and note_base_url.rstrip("/")
+            in {"https://api.deepseek.com", "https://api.deepseek.com/v1"}
+        )
+        if shared_official_deepseek:
+            note_api_key = (
+                requested_note_key or requested_report_key or self.settings.note_api_key
+            )
+            report_api_key = (
+                requested_report_key or requested_note_key or self.settings.report_api_key
+            )
+        else:
+            note_api_key = requested_note_key or self.settings.note_api_key
+            report_api_key = requested_report_key or self.settings.report_api_key
         settings = replace(
             self.settings,
             note_base_url=note_base_url,
             note_model=str(custom.get("note_model") or self.settings.note_model),
-            note_api_key=str(custom.get("note_api_key") or self.settings.note_api_key),
+            note_api_key=note_api_key,
             report_provider=report_provider,
             report_model=str(custom.get("report_model") or self.settings.report_model),
-            report_api_key=str(custom.get("report_api_key") or self.settings.report_api_key),
+            report_api_key=report_api_key,
             obsidian_root=obsidian_root,
         )
         return settings
