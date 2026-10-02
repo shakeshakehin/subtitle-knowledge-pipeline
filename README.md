@@ -37,13 +37,13 @@
 ```text
 workspace/
 ├── video-report-agent/   # external upstream dependency
-└── fusion-video-pipeline/
+└── subtitle-knowledge-pipeline/
 ```
 
 ```powershell
 git clone https://github.com/imexlovery/video-report-agent.git
-git clone <this-repository-url>
-cd fusion-video-pipeline
+git clone https://github.com/shakeshakehin/subtitle-knowledge-pipeline.git
+cd subtitle-knowledge-pipeline
 uv sync --dev
 ```
 
