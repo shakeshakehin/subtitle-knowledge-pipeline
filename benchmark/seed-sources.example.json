@@ -1,0 +1,10 @@
+[
+  {
+    "id": "S001",
+    "source_id": "local-example-001",
+    "title": "Example video title",
+    "category": "technical-concepts",
+    "subtitle_source": "C:/path/to/subtitle.txt",
+    "baseline_source": "C:/path/to/optional-v7-outline.json"
+  }
+]

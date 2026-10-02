@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>字幕知识管道人工评测</title>
+  <style>
+    :root { --ink:#17324d; --muted:#637582; --paper:#f5f7f4; --card:#fff; --line:#dce4e2;
+      --accent:#2e8b83; --orange:#e87352; --soft:#e9f4f2; --warn:#fff1dc; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"Microsoft YaHei","PingFang SC",sans-serif; color:#253943; background:var(--paper); }
+    button,input,textarea,select { font:inherit; }
+    button { border:1px solid var(--line); border-radius:9px; padding:8px 12px; background:#fff; cursor:pointer; }
+    button:hover { border-color:var(--accent); }
+    button.primary { color:#fff; background:var(--accent); border-color:var(--accent); }
+    button.danger { color:#fff; background:var(--orange); border-color:var(--orange); }
+    header { height:64px; padding:0 20px; display:flex; align-items:center; gap:16px; color:#fff; background:var(--ink); }
+    header h1 { margin:0; font-size:19px; }
+    header .spacer { flex:1; }
+    header input { width:140px; border:0; border-radius:8px; padding:8px 10px; }
+    #saveState { color:#cbe2df; min-width:110px; text-align:right; }
+    .app { display:grid; grid-template-columns:270px minmax(320px,42%) 1fr; height:calc(100vh - 64px); }
+    aside,.transcript,.workspace { overflow:auto; }
+    aside { border-right:1px solid var(--line); background:#edf1ef; padding:14px; }
+    .filters { display:flex; gap:7px; margin-bottom:12px; }
+    .filters select { width:100%; padding:7px; border:1px solid var(--line); border-radius:8px; }
+    .sample { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:8px; cursor:pointer; }
+    .sample.active { border:2px solid var(--accent); padding:9px; }
+    .sample-title { font-size:13px; font-weight:700; line-height:1.4; }
+    .sample-meta { margin-top:7px; display:flex; flex-wrap:wrap; gap:5px; }
+    .badge { padding:2px 6px; border-radius:12px; font-size:11px; background:#e5eae8; color:var(--muted); }
+    .badge.done { background:#d9eee9; color:#216e67; }
+    .badge.wait { background:var(--warn); color:#986316; }
+    .transcript { padding:18px; border-right:1px solid var(--line); background:#fbfcfa; }
+    .transcript-head { position:sticky; top:-18px; z-index:3; background:#fbfcfa; padding:16px 0 10px; }
+    .transcript h2 { margin:0 0 8px; font-size:18px; }
+    .line { display:grid; grid-template-columns:42px 1fr; gap:8px; padding:5px 7px; border-radius:6px; font-size:14px; line-height:1.55; cursor:pointer; }
+    .line:hover,.line.selected { background:#dff0ed; }
+    .line-no { color:#8b999f; text-align:right; user-select:none; }
+    .workspace { padding:18px 22px 80px; }
+    .tabs { position:sticky; top:-18px; z-index:4; background:var(--paper); display:flex; gap:6px; padding:16px 0 12px; border-bottom:1px solid var(--line); }
+    .tabs button.active { background:var(--ink); border-color:var(--ink); color:#fff; }
+    .tabs button.locked { opacity:.45; cursor:not-allowed; }
+    .panel { display:none; padding-top:18px; }
+    .panel.active { display:block; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+    .card h3 { margin:0 0 8px; color:var(--ink); font-size:16px; }
+    .help { margin:4px 0 12px; color:var(--muted); font-size:13px; line-height:1.5; }
+    textarea { width:100%; min-height:120px; resize:vertical; padding:10px; border:1px solid var(--line); border-radius:8px; line-height:1.6; }
+    .count { float:right; color:var(--muted); font-size:12px; }
+    .actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:12px 0; }
+    .rating-row { border-top:1px dashed var(--line); padding:12px 0; }
+    .rating-row:first-of-type { border-top:0; }
+    .rating-text { line-height:1.55; margin-bottom:8px; }
+    .rating-actions { display:flex; gap:6px; flex-wrap:wrap; }
+    .rating-actions button.selected { color:#fff; background:var(--accent); border-color:var(--accent); }
+    .rating-actions button.zero.selected { background:var(--orange); border-color:var(--orange); }
+    .rating-note { width:100%; margin-top:8px; padding:7px 9px; border:1px solid var(--line); border-radius:7px; }
+    .version-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .version-title { padding:8px; color:#fff; background:var(--ink); border-radius:8px 8px 0 0; font-weight:700; }
+    .version-body { border:1px solid var(--line); border-top:0; padding:12px; background:#fff; max-height:68vh; overflow:auto; }
+    .section { margin:11px 0; }
+    .section h4 { margin:0 0 6px; color:var(--accent); }
+    .node { margin:4px 0; font-size:13px; line-height:1.45; }
+    .edge { display:grid; grid-template-columns:1fr 24px 1fr; gap:6px; align-items:center; padding:9px; background:#f8faf9; border-radius:8px; }
+    .arrow { color:var(--accent); text-align:center; font-weight:700; }
+    .pairwise { display:grid; grid-template-columns:140px repeat(3,1fr); gap:7px; align-items:center; margin:8px 0; }
+    .pairwise button.selected { color:#fff; background:var(--accent); }
+    .notice { padding:12px; background:var(--warn); border:1px solid #efd3a1; border-radius:9px; line-height:1.5; }
+    .progress { height:7px; background:#dce4e2; border-radius:8px; overflow:hidden; margin:8px 0; }
+    .progress span { display:block; height:100%; background:var(--accent); }
+    @media (max-width:1100px) { .app { grid-template-columns:230px 1fr; } .transcript { display:none; } }
+  </style>
+</head>
+<body>
+<header>
+  <h1>字幕知识管道 · 人工金标准与 A/B 盲测</h1>
+  <span id="sampleHeading">请选择样本</span><span class="spacer"></span>
+  <label>评审者 <input id="reviewer" value="owner" maxlength="40"></label>
+  <span id="saveState">尚未载入</span>
+  <button id="exportButton">导出标注</button>
+  <button id="scoreButton">生成报告</button>
+</header>
+<div class="app">
+  <aside>
+    <div class="help"><b>建议先做极简 3 份</b>；方向不清楚再扩到核心 5 份。</div>
+    <div class="filters">
+      <select id="scopeFilter">
+        <option value="pilot">极简 3（推荐）</option>
+        <option value="core">核心 5</option>
+        <option value="all">全部 20</option>
+      </select>
+    </div>
+    <div class="filters">
+      <select id="categoryFilter"><option value="">全部类型</option></select>
+      <select id="statusFilter"><option value="">全部进度</option><option value="todo">未完成</option><option value="done">已完成</option></select>
+    </div>
+    <div id="overall"></div>
+    <div id="sampleList"></div>
+  </aside>
+  <section class="transcript">
+    <div class="transcript-head">
+      <h2>冻结字幕</h2>
+      <div class="help">点击字幕行可多选，再点击“复制行号”作为证据引用。</div>
+      <button id="copyLines">复制所选行号</button>
+      <button id="clearLines">清除选择</button>
+    </div>
+    <div id="transcriptLines"></div>
+  </section>
+  <main class="workspace">
+    <div class="tabs" id="tabs">
+      <button data-tab="gold" class="active">1. 人工金标准</button>
+      <button data-tab="claims">2. 忠实度</button>
+      <button data-tab="recall">3. 覆盖率</button>
+      <button data-tab="hierarchy">4. 父子关系</button>
+      <button data-tab="pairwise">5. A/B 盲测</button>
+      <button data-tab="outputs">查看输出</button>
+    </div>
+    <section id="gold" class="panel active"></section>
+    <section id="claims" class="panel"></section>
+    <section id="recall" class="panel"></section>
+    <section id="hierarchy" class="panel"></section>
+    <section id="pairwise" class="panel"></section>
+    <section id="outputs" class="panel"></section>
+  </main>
+</div>
+<script>
+const state={manifest:[],current:null,gold:null,review:null,versions:{},reviewer:localStorage.getItem('benchmarkReviewer')||'owner',selectedLines:new Set(),saveTimer:null};
+const scopes={pilot:['S002','S006','S009'],core:['S002','S006','S009','S014','S018']};
+const $=s=>document.querySelector(s); const $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(url,options={}){const r=await fetch(url,options);const d=await r.json();if(!r.ok)throw Error(d.error||r.statusText);return d;}
+function setSave(text){$('#saveState').textContent=text;}
+function reviewer(){return ($('#reviewer').value.trim().replace(/[^A-Za-z0-9_-]/g,'')||'owner').slice(0,40);}
+function linesToItems(text,prefix){return text.split(/\n/).map(x=>x.trim()).filter(Boolean).map((line,i)=>{const parts=line.split('|');return{id:`${prefix}${String(i+1).padStart(2,'0')}`,text:parts[0].trim(),evidence:(parts.slice(1).join('|')||'').trim()};});}
+function itemsToLines(items){return(items||[]).map(x=>x.evidence?`${x.text} | ${x.evidence}`:x.text).join('\n');}
+function scopedRows(){const scope=$('#scopeFilter').value;return scope==='all'?state.manifest:state.manifest.filter(x=>scopes[scope].includes(x.id));}
+function progress(){const rows=scopedRows(),done=rows.filter(x=>x.review_status==='complete').length,total=rows.length;$('#overall').innerHTML=`<b>${done}/${total} 完成</b><div class="progress"><span style="width:${total?done/total*100:0}%"></span></div><div class="help">报告会注明这是 ${total} 份阶段性评测。</div>`;}
+async function loadManifest(){state.reviewer=reviewer();localStorage.setItem('benchmarkReviewer',state.reviewer);const d=await api(`/api/manifest?reviewer=${encodeURIComponent(state.reviewer)}`);state.manifest=d.samples;renderFilters();renderList();progress();}
+function renderFilters(){const cats=[...new Set(state.manifest.map(x=>x.category))].sort();const f=$('#categoryFilter');const old=f.value;f.innerHTML='<option value="">全部类型</option>'+cats.map(x=>`<option>${esc(x)}</option>`).join('');f.value=old;}
+function renderList(){const cat=$('#categoryFilter').value,status=$('#statusFilter').value;const rows=scopedRows().filter(x=>(!cat||x.category===cat)&&(!status||(status==='done'?x.review_status==='complete':x.review_status!=='complete')));$('#sampleList').innerHTML=rows.map(x=>`<div class="sample ${state.current?.sample?.id===x.id?'active':''}" data-id="${x.id}"><div class="sample-title">${x.id} · ${esc(x.title)}</div><div class="sample-meta"><span class="badge">${esc(x.category)}</span><span class="badge">${esc(x.length_bucket)}</span><span class="badge ${x.gold_status==='complete'?'done':'wait'}">金标准 ${x.core_point_count}/8+</span><span class="badge ${x.review_status==='complete'?'done':'wait'}">${x.review_status==='complete'?'已评':'待评'}</span>${x.blind_ready?'':'<span class="badge wait">缺输出</span>'}</div></div>`).join('');$$('.sample').forEach(el=>el.onclick=()=>loadSample(el.dataset.id));}
+async function loadSample(id){setSave('载入中…');state.selectedLines.clear();state.current=await api(`/api/sample?id=${id}&reviewer=${encodeURIComponent(state.reviewer)}`);state.gold=state.current.gold;state.review=state.current.review;state.versions=state.current.versions;$('#sampleHeading').textContent=`${id} · ${state.current.sample.title}`;renderTranscript();renderAll();renderList();setSave('已载入');}
+function renderTranscript(){$('#transcriptLines').innerHTML=state.current.transcript_lines.map(x=>`<div class="line" data-line="${x.number}"><span class="line-no">L${x.number}</span><span>${esc(x.text)}</span></div>`).join('');$$('.line').forEach(el=>el.onclick=()=>{const n=Number(el.dataset.line);state.selectedLines.has(n)?state.selectedLines.delete(n):state.selectedLines.add(n);el.classList.toggle('selected');});}
+function goldReady(){return state.gold?.status==='complete';}
+function renderAll(){renderGold();renderClaims();renderRecall();renderHierarchy();renderPairwise();renderOutputs();$$('#tabs button').forEach(b=>b.classList.toggle('locked',b.dataset.tab!=='gold'&&!goldReady()));}
+function fieldCard(title,id,items,min,max,help){return`<div class="card"><h3>${title}<span class="count" id="${id}Count">${(items||[]).length} / ${min}–${max}</span></h3><div class="help">${help}；一行一条，可写成“内容 | L12-L18”。</div><textarea id="${id}">${esc(itemsToLines(items))}</textarea></div>`;}
+function renderGold(){if(!state.current)return;$('#gold').innerHTML=`<div class="notice">先只看字幕建立金标准。锁定后才会开放 A/B 输出，避免结果反向影响标准。</div><div class="actions"><button id="insertEvidence">把所选行号插入当前输入框</button><button class="primary" id="lockGold">${goldReady()?'更新并保持锁定':'锁定金标准，进入盲测'}</button><button id="unlockGold">改回草稿</button></div>${fieldCard('必须覆盖的核心知识点','corePoints',state.gold.core_points,8,12,'只写真正影响理解的观点')}${fieldCard('最终结论','conclusions',state.gold.conclusions,3,5,'应能脱离正文独立阅读')}${fieldCard('重要数字、专名和限定条件','facts',state.gold.facts_and_constraints,0,'不限','尤其记录容易被模型扩张或漏掉的限制')}${fieldCard('合理的一级主干（可选）','branches',state.gold.main_branches,3,7,'不是唯一答案，只用于辅助判断层级') }<div class="card"><h3>标注备注</h3><textarea id="goldNotes">${esc(state.gold.notes||'')}</textarea></div>`;['corePoints','conclusions','facts','branches','goldNotes'].forEach(id=>{const el=$('#'+id);el.oninput=()=>{if(id!=='goldNotes'){const c=$('#'+id+'Count');if(c)c.textContent=el.value.split(/\n/).filter(x=>x.trim()).length;}scheduleGold();};el.onfocus=()=>window.activeGoldField=el;});$('#insertEvidence').onclick=()=>{const nums=[...state.selectedLines].sort((a,b)=>a-b);if(!nums.length)return;const text=nums.length===1?`L${nums[0]}`:`L${nums[0]}-L${nums.at(-1)}`;const el=window.activeGoldField||$('#corePoints');el.value+=(el.value.trim()?' | ':'')+text;el.dispatchEvent(new Event('input'));};$('#lockGold').onclick=()=>saveGold(true);$('#unlockGold').onclick=()=>saveGold(false);}
+function collectGold(complete=goldReady()){return{...state.gold,sample_id:state.current.sample.id,title:state.current.sample.title,status:complete?'complete':'draft',core_points:linesToItems($('#corePoints').value,'K'),conclusions:linesToItems($('#conclusions').value,'C'),facts_and_constraints:linesToItems($('#facts').value,'F'),main_branches:linesToItems($('#branches').value,'B'),notes:$('#goldNotes').value};}
+function scheduleGold(){clearTimeout(state.saveTimer);setSave('待保存…');state.saveTimer=setTimeout(()=>saveGold(goldReady(),true),700);}
+async function saveGold(complete,silent=false){const gold=collectGold(complete);if(complete&&(gold.core_points.length<8||gold.core_points.length>12||gold.conclusions.length<3||gold.conclusions.length>5)){if(!silent)alert('锁定前需要 8–12 个核心知识点和 3–5 条结论。');return;}setSave('保存中…');await api('/api/gold',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(gold)});state.gold=gold;setSave('已自动保存');renderAll();await loadManifest();}
+function ratingButtons(metric,label,item,current){const score=typeof current==='object'?current.score:current;return`<div class="rating-actions" data-metric="${metric}" data-label="${label}" data-id="${esc(item.id)}">${[['1','支持/完整'],['0.5','部分'],['0','不支持/遗漏']].map(([v,t])=>`<button data-score="${v}" class="${v==='0'?'zero ':''}${String(score)===v?'selected':''}">${t}</button>`).join('')}</div><input class="rating-note" placeholder="可选：说明扩张、遗漏或归属问题" value="${esc(typeof current==='object'?current.note||'':'')}">`;}
+function bindRatings(panel){panel.querySelectorAll('.rating-actions button').forEach(button=>button.onclick=()=>{const group=button.parentElement,{metric,label,id}=group.dataset;state.review[metric]??={A:{},B:{}};state.review[metric][label]??={};const note=group.parentElement.querySelector('.rating-note').value;state.review[metric][label][id]={score:button.dataset.score,note};group.querySelectorAll('button').forEach(x=>x.classList.remove('selected'));button.classList.add('selected');scheduleReview();});panel.querySelectorAll('.rating-note').forEach(input=>input.oninput=()=>{const group=input.parentElement.querySelector('.rating-actions'),{metric,label,id}=group.dataset;const old=state.review?.[metric]?.[label]?.[id]||{};state.review[metric]??={A:{},B:{}};state.review[metric][label]??={};state.review[metric][label][id]={score:old.score||'',note:input.value};scheduleReview();});}
+function renderClaims(){const panel=$('#claims');if(!goldReady()){panel.innerHTML='<div class="notice">请先锁定人工金标准。</div>';return;}panel.innerHTML=['A','B'].map(label=>`<div class="card"><h3>版本 ${label} · 全部总结＋固定抽样节点</h3><div class="help">只判断字幕是否支持该表述，不判断写得是否漂亮。</div>${(state.versions[label]?.claims||[]).map(item=>`<div class="rating-row"><div class="rating-text"><span class="badge">${item.kind}</span> ${esc(item.text)}</div>${ratingButtons('claim_support',label,item,state.review.claim_support?.[label]?.[item.id])}</div>`).join('')}</div>`).join('');bindRatings(panel);}
+function renderRecall(){const panel=$('#recall');if(!goldReady()){panel.innerHTML='<div class="notice">请先锁定人工金标准。</div>';return;}panel.innerHTML=`<div class="card"><h3>核心知识点覆盖率</h3><div class="help">逐条判断 A/B 是否完整覆盖金标准。完整=1，部分=0.5，遗漏=0。</div>${(state.gold.core_points||[]).map(item=>`<div class="rating-row"><div class="rating-text"><b>${item.id}</b> ${esc(item.text)} ${item.evidence?`<span class="badge">${esc(item.evidence)}</span>`:''}</div><div class="version-grid"><div><b>A</b>${ratingButtons('key_point_recall','A',item,state.review.key_point_recall?.A?.[item.id])}</div><div><b>B</b>${ratingButtons('key_point_recall','B',item,state.review.key_point_recall?.B?.[item.id])}</div></div></div>`).join('')}</div>`;bindRatings(panel);}
+function renderHierarchy(){const panel=$('#hierarchy');if(!goldReady()){panel.innerHTML='<div class="notice">请先锁定人工金标准。</div>';return;}panel.innerHTML=['A','B'].map(label=>`<div class="card"><h3>版本 ${label} · 固定抽样父子边</h3><div class="help">有效：确属组成、解释、方法、步骤、证据、例子或限制；弱：有关但归属不理想；无效：仅相邻或抽象层错误。</div>${(state.versions[label]?.edges||[]).map(edge=>`<div class="rating-row"><div class="edge"><span>${esc(edge.parent)}</span><span class="arrow">→</span><span>${esc(edge.child)}</span></div>${ratingButtons('hierarchy_validity',label,edge,state.review.hierarchy_validity?.[label]?.[edge.id])}</div>`).join('')}</div>`).join('');bindRatings(panel);}
+const dimensions={coverage:'覆盖更完整',hierarchy:'层级更合理',repetition:'重复更少',study_value:'更适合学习复盘'};
+function renderPairwise(){const panel=$('#pairwise');if(!goldReady()){panel.innerHTML='<div class="notice">请先锁定人工金标准。</div>';return;}panel.innerHTML=`<div class="card"><h3>A/B 总体盲测</h3><div class="help">版本身份隐藏。必要时先到“查看输出”完整浏览，再回来选择。</div>${Object.entries(dimensions).map(([key,title])=>`<div class="pairwise" data-key="${key}"><b>${title}</b>${['A','B','tie'].map(v=>`<button data-value="${v}" class="${state.review.pairwise?.[key]===v?'selected':''}">${v==='tie'?'平局':`版本 ${v}`}</button>`).join('')}</div>`).join('')}<div class="card"><h3>整体备注</h3><textarea id="reviewNotes">${esc(state.review.notes||'')}</textarea></div><div class="actions"><button class="primary" id="completeReview">标记本样本评审完成</button><span id="reviewCheck"></span></div></div>`;panel.querySelectorAll('.pairwise button').forEach(button=>button.onclick=()=>{const row=button.parentElement;state.review.pairwise[row.dataset.key]=button.dataset.value;row.querySelectorAll('button').forEach(x=>x.classList.remove('selected'));button.classList.add('selected');scheduleReview();});$('#reviewNotes').oninput=()=>{state.review.notes=$('#reviewNotes').value;scheduleReview();};$('#completeReview').onclick=completeReview;}
+function renderOutputs(){if(!goldReady()){$('#outputs').innerHTML='<div class="notice">请先锁定人工金标准。</div>';return;}function one(label){const v=state.versions[label];if(!v)return'<div class="notice">缺少输出</div>';return`<div><div class="version-title">版本 ${label} · ${esc(v.title)}</div><div class="version-body"><p><b>主旨：</b>${esc(v.thesis)}</p>${v.sections.map(s=>`<div class="section"><h4>${esc(s.heading)}</h4>${s.points.map(n=>`<div class="node" style="margin-left:${(n.level-1)*18}px">${'└ '.repeat(Math.max(0,n.level-1))}${esc(n.text)}</div>`).join('')}</div>`).join('')}</div></div>`;}$('#outputs').innerHTML=`<div class="version-grid">${one('A')}${one('B')}</div>`;}
+function expectedCount(metric,label){if(metric==='claim_support')return state.versions[label]?.claims?.length||0;if(metric==='key_point_recall')return state.gold.core_points?.length||0;if(metric==='hierarchy_validity')return state.versions[label]?.edges?.length||0;return 0;}
+function ratedCount(metric,label){return Object.values(state.review?.[metric]?.[label]||{}).filter(x=>['0','0.5','1'].includes(String(typeof x==='object'?x.score:x))).length;}
+async function completeReview(){const missing=[];for(const metric of ['claim_support','key_point_recall','hierarchy_validity'])for(const label of ['A','B']){const a=ratedCount(metric,label),b=expectedCount(metric,label);if(a<b)missing.push(`${metric} ${label}: ${a}/${b}`);}for(const key of Object.keys(dimensions))if(!['A','B','tie'].includes(state.review.pairwise?.[key]))missing.push(`A/B ${key}`);if(missing.length){$('#reviewCheck').textContent='未完成：'+missing.join('；');return;}state.review.status='complete';await saveReview();await loadManifest();renderList();$('#reviewCheck').textContent='已完成并保存';}
+function scheduleReview(){clearTimeout(state.saveTimer);setSave('待保存…');state.saveTimer=setTimeout(saveReview,700);}
+async function saveReview(){state.review.sample_id=state.current.sample.id;state.review.reviewer=state.reviewer;setSave('保存中…');await api('/api/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state.review)});setSave('已自动保存');}
+$$('#tabs button').forEach(button=>button.onclick=()=>{if(button.classList.contains('locked'))return;$$('#tabs button').forEach(x=>x.classList.remove('active'));button.classList.add('active');$$('.panel').forEach(x=>x.classList.remove('active'));$('#'+button.dataset.tab).classList.add('active');});
+$('#scopeFilter').value=localStorage.getItem('benchmarkScope')||'pilot';$('#scopeFilter').onchange=()=>{localStorage.setItem('benchmarkScope',$('#scopeFilter').value);renderList();progress();};$('#categoryFilter').onchange=renderList;$('#statusFilter').onchange=renderList;$('#reviewer').value=state.reviewer;$('#reviewer').onchange=async()=>{state.reviewer=reviewer();await loadManifest();if(state.current)await loadSample(state.current.sample.id);};$('#copyLines').onclick=async()=>{const nums=[...state.selectedLines].sort((a,b)=>a-b);if(!nums.length)return;const text=nums.length===1?`L${nums[0]}`:`L${nums[0]}-L${nums.at(-1)}`;await navigator.clipboard.writeText(text);setSave(`已复制 ${text}`);};$('#clearLines').onclick=()=>{state.selectedLines.clear();$$('.line').forEach(x=>x.classList.remove('selected'));};$('#exportButton').onclick=()=>location.href='/api/export';$('#scoreButton').onclick=async()=>{setSave('生成报告…');const d=await api('/api/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reviewer:state.reviewer})});setSave(`已评分 ${d.scored_sample_count} 条`);alert(`报告已生成：\n${d.report}`);};
+loadManifest().then(()=>{if(state.manifest.length)loadSample(state.manifest[0].id);}).catch(e=>{setSave('载入失败');alert(e.message);});
+</script>
+</body>
+</html>

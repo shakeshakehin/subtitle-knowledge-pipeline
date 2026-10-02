@@ -1,0 +1,25 @@
+.env
+.env.*
+!.env.example
+.venv/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+*.log
+.DS_Store
+runs/
+cache/
+config/pi/
+
+# Local evaluation material may contain copyrighted transcripts and private notes.
+benchmark/admin/
+benchmark/annotations/
+benchmark/gold/
+benchmark/outputs/
+benchmark/reports/
+benchmark/subtitles/
+benchmark/work/
+benchmark/dataset.lock.json
+benchmark/manifest.jsonl
+benchmark/seed-sources.json
