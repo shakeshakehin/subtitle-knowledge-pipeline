@@ -5,6 +5,19 @@ $ReportAgentRoot = Join-Path (Split-Path -Parent $ProjectRoot) "video-report-age
 $env:PYTHONUTF8 = "1"
 $env:PYTHONIOENCODING = "utf-8"
 
+# Credential precedence is: current shell > project .env > Hermes fallback.
+# Settings.load() reads .env inside Python; this check prevents the fallback
+# from occupying the process environment first and silently masking that file.
+$ProjectEnvPath = Join-Path $ProjectRoot ".env"
+$ProjectEnvValues = @{}
+if (Test-Path -LiteralPath $ProjectEnvPath) {
+    foreach ($line in Get-Content -LiteralPath $ProjectEnvPath) {
+        if ($line -match '^\s*([^#=]+)\s*=\s*(.*?)\s*$') {
+            $ProjectEnvValues[$Matches[1].Trim()] = $Matches[2].Trim().Trim('"').Trim("'")
+        }
+    }
+}
+
 # Reuse optional local runtimes installed by video-report-agent while still
 # allowing globally installed Node.js and Pi to work.
 $RuntimePaths = @()
@@ -26,12 +39,14 @@ if ($RuntimePaths.Count -gt 0) {
 }
 
 $HermesEnv = if ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA "hermes\profiles\manager\.env" } else { $null }
-if ((-not $env:NOTE_API_KEY -or -not $env:REPORT_API_KEY) -and $HermesEnv -and (Test-Path -LiteralPath $HermesEnv)) {
+$NeedsNoteKey = -not $env:NOTE_API_KEY -and -not $ProjectEnvValues["NOTE_API_KEY"]
+$NeedsReportKey = -not $env:REPORT_API_KEY -and -not $ProjectEnvValues["REPORT_API_KEY"]
+if (($NeedsNoteKey -or $NeedsReportKey) -and $HermesEnv -and (Test-Path -LiteralPath $HermesEnv)) {
     $KeyLine = Get-Content -LiteralPath $HermesEnv | Where-Object { $_ -match '^DEEPSEEK_API_KEY=' } | Select-Object -First 1
     if ($KeyLine) {
         $DeepSeekKey = $KeyLine.Substring($KeyLine.IndexOf('=') + 1).Trim().Trim('"').Trim("'")
-        if (-not $env:NOTE_API_KEY) { $env:NOTE_API_KEY = $DeepSeekKey }
-        if (-not $env:REPORT_API_KEY) { $env:REPORT_API_KEY = $DeepSeekKey }
+        if ($NeedsNoteKey) { $env:NOTE_API_KEY = $DeepSeekKey }
+        if ($NeedsReportKey) { $env:REPORT_API_KEY = $DeepSeekKey }
     }
 }
 

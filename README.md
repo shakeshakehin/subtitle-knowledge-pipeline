@@ -48,6 +48,8 @@ uv sync --dev
 ```
 
 复制 `.env.example` 为 `.env`，或直接在 shell 中设置模型环境变量；不要把真实密钥提交到 Git。
+模型密钥优先级为当前 shell、项目 `.env`、现有 Hermes 配置；因此在项目 `.env` 中设置的 Key 不会再被
+Hermes 的旧 Key 覆盖。
 
 ### 启动与生成
 
