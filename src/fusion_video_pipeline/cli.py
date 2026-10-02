@@ -35,6 +35,11 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8766)
     serve.add_argument("--no-browser", action="store_true")
+    serve.add_argument(
+        "--public-mode",
+        action="store_true",
+        help="启用访问认证并锁定可被远程请求修改的服务端设置",
+    )
     return parser
 
 
@@ -65,6 +70,7 @@ def main() -> int:
             host=args.host,
             port=args.port,
             open_browser=not args.no_browser,
+            public_mode=args.public_mode,
         )
     return 0
 

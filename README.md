@@ -57,6 +57,30 @@ uv sync --dev
 .\run-fusion.ps1 serve
 ```
 
+### 受保护的外网预览
+
+公开 GitHub 仓库中的 `video-report-agent` 是核心管道；其线上网站的账号、配额、Web 路由与部署属于
+作者未公开的 Service 仓库。本项目只参考“单入口、模式选择、阶段进度、历史报告”的产品结构，前端与
+服务端实现均为独立代码，不复制其私有网站源码。
+
+把访问凭据放入未跟踪的 `.env`，密码至少 16 个字符：
+
+```dotenv
+FUSION_ACCESS_USERNAME=your-name
+FUSION_ACCESS_PASSWORD=use-a-long-random-password
+```
+
+然后只监听回环地址，并通过提供 HTTPS 的反向代理或隧道转发：
+
+```powershell
+.\run-fusion.ps1 serve --public-mode --host 127.0.0.1 --port 8766 --no-browser
+cloudflared tunnel --url http://127.0.0.1:8766
+```
+
+外网模式会启用 HTTP Basic Auth、限制等待／运行任务数量、锁定模型 Base URL 与报告 Provider、禁止网页
+覆盖服务器的 Obsidian 路径，并对生成 HTML 添加浏览器沙箱和安全响应头。临时 Tunnel 地址会变化；长期
+作品展示应改用带域名、访问策略和持久化配置的正式部署。不要把无 TLS 的端口直接映射到公网。
+
 网页支持 B 站链接或本地字幕，并可单独选择“知识树”“详细总结”或同时生成。两者同时生成时，
 点击左侧树节点会依据共享的 `source_units` 及其字幕时间范围，在右侧详细报告中滚动并高亮对应内容。
 这里的时间范围只用于报告内部定位，不跳转原视频。API Key 输入只存在于当前服务进程内存中。

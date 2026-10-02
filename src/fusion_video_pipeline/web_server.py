@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import base64
 import hashlib
+import hmac
 import json
 import mimetypes
+import os
 import threading
 import time
 import uuid
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -37,6 +40,41 @@ HISTORY_ARTIFACTS = {
 }
 
 
+@dataclass(frozen=True)
+class WebAccess:
+    enabled: bool = False
+    username: str = ""
+    password: str = ""
+
+    @classmethod
+    def from_environment(cls, *, enabled: bool) -> "WebAccess":
+        if not enabled:
+            return cls()
+        username = os.getenv("FUSION_ACCESS_USERNAME", "").strip()
+        password = os.getenv("FUSION_ACCESS_PASSWORD", "")
+        if not username or len(password) < 16:
+            raise RuntimeError(
+                "外网模式需要 FUSION_ACCESS_USERNAME，以及至少 16 个字符的 "
+                "FUSION_ACCESS_PASSWORD"
+            )
+        return cls(enabled=True, username=username, password=password)
+
+
+def basic_auth_matches(header: str | None, access: WebAccess) -> bool:
+    if not access.enabled:
+        return True
+    if not header or not header.startswith("Basic "):
+        return False
+    try:
+        decoded = base64.b64decode(header[6:].strip(), validate=True).decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return False
+    username, separator, password = decoded.partition(":")
+    return bool(separator) and hmac.compare_digest(
+        username, access.username
+    ) and hmac.compare_digest(password, access.password)
+
+
 def _read_json(path: Path) -> dict:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -46,14 +84,21 @@ def _read_json(path: Path) -> dict:
 
 
 class JobManager:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, *, public_mode: bool = False):
         self.settings = settings
+        self.public_mode = public_mode
         self.jobs: dict[str, dict] = {}
         self.lock = threading.Lock()
         # Model work is intentionally serialized to keep local cost and machine load predictable.
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="fusion-web")
 
     def submit(self, payload: dict) -> dict:
+        with self.lock:
+            active_jobs = sum(
+                job.get("state") in {"queued", "running"} for job in self.jobs.values()
+            )
+        if active_jobs >= 3:
+            raise ValueError("当前已有 3 个任务等待或运行，请稍后再试")
         job_id = uuid.uuid4().hex[:12]
         outputs = {
             name for name in ("tree", "report") if bool((payload.get("outputs") or {}).get(name))
@@ -70,21 +115,7 @@ class JobManager:
         report_mode = str(payload.get("report_mode") or "standard")
         if report_mode not in {"standard", "brief"}:
             raise ValueError("报告模式无效")
-        custom = payload.get("models") or {}
-        settings = replace(
-            self.settings,
-            note_base_url=str(custom.get("note_base_url") or self.settings.note_base_url).rstrip(
-                "/"
-            ),
-            note_model=str(custom.get("note_model") or self.settings.note_model),
-            note_api_key=str(custom.get("note_api_key") or self.settings.note_api_key),
-            report_provider=str(custom.get("report_provider") or self.settings.report_provider),
-            report_model=str(custom.get("report_model") or self.settings.report_model),
-            report_api_key=str(custom.get("report_api_key") or self.settings.report_api_key),
-            obsidian_root=Path(
-                str(payload.get("obsidian_root") or self.settings.obsidian_root)
-            ).expanduser(),
-        )
+        settings = self.request_settings(payload)
         if "tree" in outputs and not settings.note_api_key:
             raise ValueError("生成知识树需要填写 Tree API Key 或在 .env 配置 NOTE_API_KEY")
         if "report" in outputs and not settings.report_api_key:
@@ -124,6 +155,37 @@ class JobManager:
             bool(payload.get("save_to_obsidian")),
         )
         return dict(public_job)
+
+    def request_settings(self, payload: dict) -> Settings:
+        custom = payload.get("models") if isinstance(payload.get("models"), dict) else {}
+        # In public mode, endpoint/provider and filesystem roots are server policy.
+        # A remote request may still choose a model and provide its own in-memory key.
+        note_base_url = (
+            self.settings.note_base_url
+            if self.public_mode
+            else str(custom.get("note_base_url") or self.settings.note_base_url).rstrip("/")
+        )
+        report_provider = (
+            self.settings.report_provider
+            if self.public_mode
+            else str(custom.get("report_provider") or self.settings.report_provider)
+        )
+        obsidian_root = (
+            self.settings.obsidian_root
+            if self.public_mode
+            else Path(str(payload.get("obsidian_root") or self.settings.obsidian_root)).expanduser()
+        )
+        settings = replace(
+            self.settings,
+            note_base_url=note_base_url,
+            note_model=str(custom.get("note_model") or self.settings.note_model),
+            note_api_key=str(custom.get("note_api_key") or self.settings.note_api_key),
+            report_provider=report_provider,
+            report_model=str(custom.get("report_model") or self.settings.report_model),
+            report_api_key=str(custom.get("report_api_key") or self.settings.report_api_key),
+            obsidian_root=obsidian_root,
+        )
+        return settings
 
     def _prepare_source(self, payload: dict, source_type: str) -> str:
         if source_type == "bilibili":
@@ -343,14 +405,36 @@ class WebHandler(BaseHTTPRequestHandler):
     def manager(self) -> JobManager:
         return self.server.manager  # type: ignore[attr-defined]
 
+    @property
+    def access(self) -> WebAccess:
+        return self.server.web_access  # type: ignore[attr-defined]
+
     def log_message(self, format: str, *args) -> None:
         return
+
+    def _security_headers(self, *, allow_embedding: bool = False) -> None:
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        if not allow_embedding:
+            self.send_header("X-Frame-Options", "SAMEORIGIN")
+
+    def _authenticate(self) -> bool:
+        if basic_auth_matches(self.headers.get("Authorization"), self.access):
+            return True
+        self.send_response(HTTPStatus.UNAUTHORIZED)
+        self.send_header("WWW-Authenticate", 'Basic realm="Fusion Video Pipeline", charset="UTF-8"')
+        self.send_header("Cache-Control", "no-store")
+        self._security_headers()
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+        return False
 
     def _json(self, payload: object, status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
+        self._security_headers()
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -368,12 +452,21 @@ class WebHandler(BaseHTTPRequestHandler):
         return value
 
     def do_GET(self) -> None:
+        if not self._authenticate():
+            return
         parsed = urlparse(self.path)
         path = parsed.path
         if path == "/":
             body = Path(__file__).with_name("web_ui.html").read_bytes()
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header(
+                "Content-Security-Policy",
+                "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
+                "img-src 'self' data: blob:; frame-src 'self'; connect-src 'self'",
+            )
+            self._security_headers()
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -388,7 +481,8 @@ class WebHandler(BaseHTTPRequestHandler):
                     "report_provider": settings.report_provider,
                     "report_model": settings.report_model,
                     "report_api_key_configured": bool(settings.report_api_key),
-                    "obsidian_root": str(settings.obsidian_root),
+                    "obsidian_root": "" if self.manager.public_mode else str(settings.obsidian_root),
+                    "public_mode": self.manager.public_mode,
                 }
             )
             return
@@ -422,6 +516,15 @@ class WebHandler(BaseHTTPRequestHandler):
             self.send_header(
                 "Content-Type", f"{mime}; charset=utf-8" if mime.startswith("text/") else mime
             )
+            self.send_header("Cache-Control", "private, no-store")
+            if mime == "text/html":
+                self.send_header(
+                    "Content-Security-Policy",
+                    "sandbox allow-scripts allow-downloads; default-src 'self' data: blob: https:; "
+                    "style-src 'unsafe-inline' 'self' https:; script-src 'unsafe-inline' 'self'; "
+                    "img-src 'self' data: blob: https:; connect-src 'none'; frame-src * data: blob:",
+                )
+            self._security_headers(allow_embedding=True)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -441,6 +544,15 @@ class WebHandler(BaseHTTPRequestHandler):
             self.send_header(
                 "Content-Type", f"{mime}; charset=utf-8" if mime.startswith("text/") else mime
             )
+            self.send_header("Cache-Control", "private, no-store")
+            if mime == "text/html":
+                self.send_header(
+                    "Content-Security-Policy",
+                    "sandbox allow-scripts allow-downloads; default-src 'self' data: blob: https:; "
+                    "style-src 'unsafe-inline' 'self' https:; script-src 'unsafe-inline' 'self'; "
+                    "img-src 'self' data: blob: https:; connect-src 'none'; frame-src * data: blob:",
+                )
+            self._security_headers(allow_embedding=True)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -448,6 +560,8 @@ class WebHandler(BaseHTTPRequestHandler):
         self._error(HTTPStatus.NOT_FOUND, "路径不存在")
 
     def do_POST(self) -> None:
+        if not self._authenticate():
+            return
         if urlparse(self.path).path != "/api/jobs":
             self._error(HTTPStatus.NOT_FOUND, "路径不存在")
             return
@@ -466,13 +580,20 @@ def serve_web(
     host: str = "127.0.0.1",
     port: int = 8766,
     open_browser: bool = True,
+    public_mode: bool = False,
 ) -> None:
-    manager = JobManager(settings)
+    if host not in {"127.0.0.1", "localhost", "::1"} and not public_mode:
+        raise RuntimeError("拒绝在未启用 --public-mode 时监听非本机地址")
+    access = WebAccess.from_environment(enabled=public_mode)
+    manager = JobManager(settings, public_mode=public_mode)
     server = ThreadingHTTPServer((host, port), WebHandler)
     server.manager = manager  # type: ignore[attr-defined]
+    server.web_access = access  # type: ignore[attr-defined]
     url = f"http://{host}:{port}/"
     print(f"字幕知识管道：{url}")
     print("API Key 只保留在本次进程内存，不写入运行目录。按 Ctrl+C 停止。")
+    if public_mode:
+        print("外网安全模式：已启用访问认证，并锁定模型端点、Provider 与 Obsidian 路径。")
     if open_browser:
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()
     try:

@@ -1,8 +1,9 @@
+import base64
 import json
 from pathlib import Path
 
 from fusion_video_pipeline.config import Settings
-from fusion_video_pipeline.web_server import JobManager
+from fusion_video_pipeline.web_server import JobManager, WebAccess, basic_auth_matches
 
 
 def settings(tmp_path):
@@ -102,3 +103,41 @@ def test_web_ui_contains_live_progress_and_persisted_history_controls():
     assert 'id="history-filter"' in html
     assert 'class="progress-track"' in html
     assert "/api/history?limit=60" in html
+    assert 'sandbox="allow-scripts allow-downloads"' in html
+
+
+def test_public_mode_locks_server_controlled_endpoints_and_paths(tmp_path):
+    manager = JobManager(settings(tmp_path), public_mode=True)
+    try:
+        requested = manager.request_settings(
+            {
+                "obsidian_root": tmp_path / "attacker-selected",
+                "models": {
+                    "note_base_url": "https://attacker.invalid",
+                    "note_model": "allowed-custom-tree-model",
+                    "note_api_key": "request-tree-key",
+                    "report_provider": "attacker-provider",
+                    "report_model": "allowed-custom-report-model",
+                    "report_api_key": "request-report-key",
+                },
+            }
+        )
+        assert requested.note_base_url == "https://example.invalid"
+        assert requested.report_provider == "provider"
+        assert requested.obsidian_root == tmp_path / "vault"
+        assert requested.note_model == "allowed-custom-tree-model"
+        assert requested.report_model == "allowed-custom-report-model"
+        assert requested.note_api_key == "request-tree-key"
+        assert requested.report_api_key == "request-report-key"
+    finally:
+        manager.executor.shutdown(wait=False, cancel_futures=True)
+
+
+def test_basic_auth_uses_exact_username_and_password():
+    access = WebAccess(enabled=True, username="owner", password="a-strong-test-password")
+    encoded = base64.b64encode(b"owner:a-strong-test-password").decode("ascii")
+    assert basic_auth_matches(f"Basic {encoded}", access)
+    assert not basic_auth_matches(None, access)
+    assert not basic_auth_matches("Basic not-base64", access)
+    wrong = base64.b64encode(b"owner:wrong-password").decode("ascii")
+    assert not basic_auth_matches(f"Basic {wrong}", access)
