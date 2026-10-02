@@ -10,6 +10,7 @@ __pycache__/
 .DS_Store
 runs/
 cache/
+.runtime/
 config/pi/
 
 # Local evaluation material may contain copyrighted transcripts and private notes.

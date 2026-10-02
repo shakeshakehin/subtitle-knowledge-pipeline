@@ -3,7 +3,12 @@ import json
 from pathlib import Path
 
 from fusion_video_pipeline.config import Settings
-from fusion_video_pipeline.web_server import JobManager, WebAccess, basic_auth_matches
+from fusion_video_pipeline.web_server import (
+    JobManager,
+    WebAccess,
+    basic_auth_matches,
+    session_cookie_matches,
+)
 
 
 def settings(tmp_path):
@@ -141,3 +146,14 @@ def test_basic_auth_uses_exact_username_and_password():
     assert not basic_auth_matches("Basic not-base64", access)
     wrong = base64.b64encode(b"owner:wrong-password").decode("ascii")
     assert not basic_auth_matches(f"Basic {wrong}", access)
+
+
+def test_web_access_issues_and_revokes_browser_session():
+    access = WebAccess(enabled=True, username="owner", password="a-strong-test-password")
+    assert access.issue_session("owner", "wrong-password", "127.0.0.1") is None
+    token = access.issue_session("owner", "a-strong-test-password", "127.0.0.1")
+    assert token
+    cookie = f"theme=light; fusion_session={token}"
+    assert session_cookie_matches(cookie, access)
+    access.revoke_session(token)
+    assert not session_cookie_matches(cookie, access)

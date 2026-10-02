@@ -6,13 +6,15 @@ import hmac
 import json
 import mimetypes
 import os
+import secrets
 import threading
 import time
 import uuid
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from http import HTTPStatus
+from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
@@ -40,11 +42,15 @@ HISTORY_ARTIFACTS = {
 }
 
 
-@dataclass(frozen=True)
+@dataclass
 class WebAccess:
     enabled: bool = False
     username: str = ""
     password: str = ""
+    session_seconds: int = 12 * 60 * 60
+    sessions: dict[str, float] = field(default_factory=dict, repr=False)
+    failed_logins: dict[str, list[float]] = field(default_factory=dict, repr=False)
+    lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     @classmethod
     def from_environment(cls, *, enabled: bool) -> "WebAccess":
@@ -58,6 +64,38 @@ class WebAccess:
                 "FUSION_ACCESS_PASSWORD"
             )
         return cls(enabled=True, username=username, password=password)
+
+    def issue_session(self, username: str, password: str, client_key: str) -> str | None:
+        now = time.time()
+        with self.lock:
+            recent = [stamp for stamp in self.failed_logins.get(client_key, []) if now - stamp < 600]
+            if len(recent) >= 10:
+                self.failed_logins[client_key] = recent
+                return None
+            valid = hmac.compare_digest(username, self.username) and hmac.compare_digest(
+                password, self.password
+            )
+            if not valid:
+                recent.append(now)
+                self.failed_logins[client_key] = recent
+                return None
+            self.failed_logins.pop(client_key, None)
+            token = secrets.token_urlsafe(32)
+            self.sessions[token] = now + self.session_seconds
+            return token
+
+    def session_is_valid(self, token: str) -> bool:
+        now = time.time()
+        with self.lock:
+            expired = [key for key, expires in self.sessions.items() if expires <= now]
+            for key in expired:
+                self.sessions.pop(key, None)
+            expires = self.sessions.get(token)
+            return bool(expires and expires > now)
+
+    def revoke_session(self, token: str) -> None:
+        with self.lock:
+            self.sessions.pop(token, None)
 
 
 def basic_auth_matches(header: str | None, access: WebAccess) -> bool:
@@ -73,6 +111,22 @@ def basic_auth_matches(header: str | None, access: WebAccess) -> bool:
     return bool(separator) and hmac.compare_digest(
         username, access.username
     ) and hmac.compare_digest(password, access.password)
+
+
+def _session_token(cookie_header: str | None) -> str:
+    if not cookie_header:
+        return ""
+    cookie = SimpleCookie()
+    try:
+        cookie.load(cookie_header)
+    except Exception:
+        return ""
+    value = cookie.get("fusion_session")
+    return value.value if value else ""
+
+
+def session_cookie_matches(cookie_header: str | None, access: WebAccess) -> bool:
+    return access.enabled and access.session_is_valid(_session_token(cookie_header))
 
 
 def _read_json(path: Path) -> dict:
@@ -418,23 +472,39 @@ class WebHandler(BaseHTTPRequestHandler):
         if not allow_embedding:
             self.send_header("X-Frame-Options", "SAMEORIGIN")
 
-    def _authenticate(self) -> bool:
-        if basic_auth_matches(self.headers.get("Authorization"), self.access):
+    def _is_authenticated(self) -> bool:
+        return basic_auth_matches(
+            self.headers.get("Authorization"), self.access
+        ) or session_cookie_matches(self.headers.get("Cookie"), self.access)
+
+    def _authenticate(self, *, api: bool = False) -> bool:
+        if self._is_authenticated():
             return True
-        self.send_response(HTTPStatus.UNAUTHORIZED)
-        self.send_header("WWW-Authenticate", 'Basic realm="Fusion Video Pipeline", charset="UTF-8"')
-        self.send_header("Cache-Control", "no-store")
-        self._security_headers()
-        self.send_header("Content-Length", "0")
-        self.end_headers()
+        if api:
+            self._json({"error": "登录已失效，请刷新页面重新登录"}, HTTPStatus.UNAUTHORIZED)
+        else:
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", "/login")
+            self.send_header("Cache-Control", "no-store")
+            self._security_headers()
+            self.send_header("Content-Length", "0")
+            self.end_headers()
         return False
 
-    def _json(self, payload: object, status: HTTPStatus = HTTPStatus.OK) -> None:
+    def _json(
+        self,
+        payload: object,
+        status: HTTPStatus = HTTPStatus.OK,
+        *,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self._security_headers()
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -452,10 +522,31 @@ class WebHandler(BaseHTTPRequestHandler):
         return value
 
     def do_GET(self) -> None:
-        if not self._authenticate():
-            return
         parsed = urlparse(self.path)
         path = parsed.path
+        if path == "/login":
+            if self._is_authenticated():
+                self.send_response(HTTPStatus.FOUND)
+                self.send_header("Location", "/")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            body = Path(__file__).with_name("login_ui.html").read_bytes()
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header(
+                "Content-Security-Policy",
+                "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
+                "connect-src 'self'; img-src 'self' data:",
+            )
+            self._security_headers()
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if not self._authenticate(api=path.startswith("/api/")):
+            return
         if path == "/":
             body = Path(__file__).with_name("web_ui.html").read_bytes()
             self.send_response(HTTPStatus.OK)
@@ -560,9 +651,45 @@ class WebHandler(BaseHTTPRequestHandler):
         self._error(HTTPStatus.NOT_FOUND, "路径不存在")
 
     def do_POST(self) -> None:
-        if not self._authenticate():
+        path = urlparse(self.path).path
+        if path == "/api/login":
+            try:
+                if int(self.headers.get("Content-Length", "0")) > 8192:
+                    raise ValueError("请求内容过大")
+                payload = self._body()
+                client_key = str(
+                    self.headers.get("CF-Connecting-IP") or self.client_address[0] or "unknown"
+                )
+                token = self.access.issue_session(
+                    str(payload.get("username") or ""),
+                    str(payload.get("password") or ""),
+                    client_key,
+                )
+                if not token:
+                    self._error(HTTPStatus.UNAUTHORIZED, "用户名或密码错误；连续失败过多时请稍后再试")
+                    return
+                cookie = (
+                    f"fusion_session={token}; Path=/; Max-Age={self.access.session_seconds}; "
+                    "HttpOnly; Secure; SameSite=Strict"
+                )
+                self._json({"ok": True}, headers={"Set-Cookie": cookie})
+            except (ValueError, json.JSONDecodeError) as exc:
+                self._error(HTTPStatus.BAD_REQUEST, str(exc))
             return
-        if urlparse(self.path).path != "/api/jobs":
+        if not self._authenticate(api=True):
+            return
+        if path == "/api/logout":
+            self.access.revoke_session(_session_token(self.headers.get("Cookie")))
+            self._json(
+                {"ok": True},
+                headers={
+                    "Set-Cookie": (
+                        "fusion_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict"
+                    )
+                },
+            )
+            return
+        if path != "/api/jobs":
             self._error(HTTPStatus.NOT_FOUND, "路径不存在")
             return
         try:

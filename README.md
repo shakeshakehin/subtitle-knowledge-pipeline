@@ -77,7 +77,16 @@ FUSION_ACCESS_PASSWORD=use-a-long-random-password
 cloudflared tunnel --url http://127.0.0.1:8766
 ```
 
-外网模式会启用 HTTP Basic Auth、限制等待／运行任务数量、锁定模型 Base URL 与报告 Provider、禁止网页
+Windows 上也可以一次启动管道网站、评测页面和临时 Tunnel；它们会作为隐藏的独立后台进程运行，
+不会依赖当前终端或 Codex 对话持续打开：
+
+```powershell
+.\start-web-services.ps1
+.\status-web-services.ps1
+# 不再需要时：.\stop-web-services.ps1
+```
+
+外网模式会启用站内登录与 12 小时安全会话、限制等待／运行任务数量、锁定模型 Base URL 与报告 Provider、禁止网页
 覆盖服务器的 Obsidian 路径，并对生成 HTML 添加浏览器沙箱和安全响应头。临时 Tunnel 地址会变化；长期
 作品展示应改用带域名、访问策略和持久化配置的正式部署。不要把无 TLS 的端口直接映射到公网。
 

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>登录 · 字幕知识管道</title>
+<style>
+:root{--ink:#142833;--muted:#687a83;--blue:#176681;--coral:#ef7657}*{box-sizing:border-box}body{min-height:100vh;margin:0;display:grid;place-items:center;padding:24px;color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;background:radial-gradient(circle at 12% 3%,#ddecf4 0,transparent 35%),radial-gradient(circle at 88% 7%,#f9e4dd 0,transparent 35%),#f5f7f5}.card{width:min(440px,100%);padding:29px;border:1px solid #dfe5e3;border-radius:22px;background:#fffffff2;box-shadow:0 24px 75px #243b481c}.kicker{font-size:11px;font-weight:900;letter-spacing:.18em;color:var(--blue)}h1{margin:10px 0 7px;font-size:30px;letter-spacing:-.035em}p{margin:0 0 22px;color:var(--muted);font-size:13px;line-height:1.7}label{display:block;margin:13px 0}label span{display:block;margin-bottom:7px;font-size:12px;font-weight:800}input{width:100%;border:1px solid #cdd8d8;border-radius:11px;padding:12px 13px;background:white;font:inherit}input:focus{outline:3px solid #17668120;border-color:var(--blue)}button{width:100%;border:0;border-radius:12px;padding:13px;margin-top:8px;background:linear-gradient(105deg,var(--blue),#548aa1 52%,var(--coral));color:white;font:inherit;font-weight:900;cursor:pointer}button:disabled{opacity:.6;cursor:wait}.error{margin:13px 0 0;padding:10px;border-radius:9px;background:#ffebe7;color:#8a3029;font-size:12px}.note{margin:15px 2px 0;font-size:10px;color:var(--muted)}
+</style>
+</head>
+<body>
+<form class="card" id="login-form"><div class="kicker">FUSION NOTES · PRIVATE PREVIEW</div><h1>登录字幕知识管道</h1><p>这是受保护的外网预览。登录后可以使用知识树、详细报告、历史记录与 Obsidian 归档。</p><label><span>用户名</span><input id="username" autocomplete="username" required autofocus></label><label><span>访问密码</span><input id="password" type="password" autocomplete="current-password" required></label><button id="submit" type="submit">登录</button><div id="error" class="error" hidden></div><div class="note">登录状态保留 12 小时；API Key 不会写入浏览器历史或项目文件。</div></form>
+<script>
+const form=document.getElementById('login-form'),button=document.getElementById('submit'),error=document.getElementById('error');form.addEventListener('submit',async event=>{event.preventDefault();button.disabled=true;button.textContent='登录中……';error.hidden=true;try{const response=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('username').value,password:document.getElementById('password').value})});const data=await response.json();if(!response.ok)throw new Error(data.error||'登录失败');location.replace('/');}catch(reason){error.textContent=reason.message;error.hidden=false;button.disabled=false;button.textContent='登录';}});
+</script>
+</body>
+</html>
