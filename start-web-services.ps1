@@ -57,6 +57,11 @@ $tunnelProcess = Get-CimInstance Win32_Process -Filter "Name = 'cloudflared.exe'
 $tunnelStdout = Join-Path $RuntimeRoot "tunnel.stdout.log"
 $tunnelStderr = Join-Path $RuntimeRoot "tunnel.stderr.log"
 if (-not $tunnelProcess) {
+    # A Quick Tunnel URL is single-use. Remove stale output before parsing the
+    # newly started process so an expired URL cannot be written back to state.
+    foreach ($log in @($tunnelStdout, $tunnelStderr)) {
+        if (Test-Path -LiteralPath $log) { Clear-Content -LiteralPath $log }
+    }
     $startedTunnel = Start-Process -FilePath $cloudflaredPath `
         -ArgumentList @("tunnel", "--no-autoupdate", "--url", "http://127.0.0.1:8766") `
         -WorkingDirectory $ProjectRoot -WindowStyle Hidden -PassThru `
@@ -74,8 +79,8 @@ foreach ($attempt in 1..60) {
             $logs += Get-Content -LiteralPath $log -Raw -ErrorAction SilentlyContinue
         }
     }
-    $match = [regex]::Match(($logs -join "`n"), 'https://[a-z0-9-]+\.trycloudflare\.com')
-    if ($match.Success) { $url = $match.Value; break }
+    $matches = [regex]::Matches(($logs -join "`n"), 'https://[a-z0-9-]+\.trycloudflare\.com')
+    if ($matches.Count -gt 0) { $url = $matches[$matches.Count - 1].Value; break }
     Start-Sleep -Milliseconds 250
 }
 
