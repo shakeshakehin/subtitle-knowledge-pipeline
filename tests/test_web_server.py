@@ -110,6 +110,29 @@ def test_web_ui_contains_live_progress_and_persisted_history_controls():
     assert 'class="progress-track"' in html
     assert "/api/history?limit=60" in html
     assert 'sandbox="allow-scripts allow-downloads"' in html
+    assert "公开访问模式 · 自带 Key" in html
+
+
+def test_public_mode_can_disable_login_without_disabling_server_locks(tmp_path):
+    access = WebAccess.from_environment(enabled=False)
+    manager = JobManager(settings(tmp_path), public_mode=True)
+    try:
+        assert access.enabled is False
+        assert basic_auth_matches(None, access)
+        requested = manager.request_settings(
+            {
+                "obsidian_root": tmp_path / "attacker-selected",
+                "models": {
+                    "note_base_url": "https://attacker.invalid",
+                    "report_provider": "attacker-provider",
+                },
+            }
+        )
+        assert requested.note_base_url == "https://example.invalid"
+        assert requested.report_provider == "provider"
+        assert requested.obsidian_root == tmp_path / "vault"
+    finally:
+        manager.executor.shutdown(wait=False, cancel_futures=True)
 
 
 def test_public_mode_locks_server_controlled_endpoints_and_paths(tmp_path):

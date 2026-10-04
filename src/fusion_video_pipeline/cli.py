@@ -38,7 +38,12 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument(
         "--public-mode",
         action="store_true",
-        help="启用访问认证并锁定可被远程请求修改的服务端设置",
+        help="启用外网安全策略，锁定可被远程请求修改的服务端设置",
+    )
+    serve.add_argument(
+        "--no-auth",
+        action="store_true",
+        help="公开模式下取消登录页；仍锁定模型端点、Provider 与 Obsidian 路径",
     )
     return parser
 
@@ -65,12 +70,15 @@ def main() -> int:
     elif args.command == "serve":
         from .web_server import serve_web
 
+        if args.no_auth and not args.public_mode:
+            raise SystemExit("--no-auth 只能与 --public-mode 一起使用")
         serve_web(
             settings,
             host=args.host,
             port=args.port,
             open_browser=not args.no_browser,
             public_mode=args.public_mode,
+            require_auth=not args.no_auth,
         )
     return 0
 

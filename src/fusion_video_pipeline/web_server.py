@@ -643,6 +643,7 @@ class WebHandler(BaseHTTPRequestHandler):
                     "report_api_key_configured": bool(settings.report_api_key),
                     "obsidian_root": "" if self.manager.public_mode else str(settings.obsidian_root),
                     "public_mode": self.manager.public_mode,
+                    "auth_required": self.access.enabled,
                     "access_role": self._access_role(),
                 }
             )
@@ -799,10 +800,11 @@ def serve_web(
     port: int = 8766,
     open_browser: bool = True,
     public_mode: bool = False,
+    require_auth: bool = True,
 ) -> None:
     if host not in {"127.0.0.1", "localhost", "::1"} and not public_mode:
         raise RuntimeError("拒绝在未启用 --public-mode 时监听非本机地址")
-    access = WebAccess.from_environment(enabled=public_mode)
+    access = WebAccess.from_environment(enabled=public_mode and require_auth)
     manager = JobManager(settings, public_mode=public_mode)
     server = ThreadingHTTPServer((host, port), WebHandler)
     server.manager = manager  # type: ignore[attr-defined]
@@ -811,7 +813,10 @@ def serve_web(
     print(f"字幕知识管道：{url}")
     print("API Key 只保留在本次进程内存，不写入运行目录。按 Ctrl+C 停止。")
     if public_mode:
-        print("外网安全模式：已启用访问认证，并锁定模型端点、Provider 与 Obsidian 路径。")
+        access_mode = "公开访问（无登录）" if not require_auth else "访问认证"
+        print(
+            f"外网安全模式：已启用{access_mode}，并锁定模型端点、Provider 与 Obsidian 路径。"
+        )
     if open_browser:
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()
     try:

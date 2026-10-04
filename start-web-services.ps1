@@ -38,7 +38,7 @@ function Start-HiddenPowerShell(
 }
 
 $fusionPid = Start-HiddenPowerShell -Name "fusion" -Script (Join-Path $ProjectRoot "run-fusion.ps1") `
-    -Arguments @("serve", "--host", "127.0.0.1", "--port", "8766", "--no-browser", "--public-mode") `
+    -Arguments @("serve", "--host", "127.0.0.1", "--port", "8766", "--no-browser", "--public-mode", "--no-auth") `
     -Port 8766
 $benchmarkPid = Start-HiddenPowerShell -Name "benchmark" -Script (Join-Path $ProjectRoot "run-benchmark.ps1") `
     -Arguments @("serve", "--host", "127.0.0.1", "--port", "8765", "--no-open") -Port 8765

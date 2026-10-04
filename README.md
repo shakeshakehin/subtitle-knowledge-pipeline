@@ -71,7 +71,15 @@ Hermes 的旧 Key 覆盖。
 作者未公开的 Service 仓库。本项目只参考“单入口、模式选择、阶段进度、历史报告”的产品结构，前端与
 服务端实现均为独立代码，不复制其私有网站源码。
 
-把访问凭据放入未跟踪的 `.env`，密码至少 16 个字符：
+默认后台启动脚本使用无登录公开模式；访问者需要提供自己的模型 API Key，模型端点、Provider 与
+Obsidian 路径仍由服务端锁定：
+
+```powershell
+.\start-web-services.ps1
+```
+
+如需恢复受保护预览，可把访问凭据放入未跟踪的 `.env`，密码至少 16 个字符，并直接运行不带
+`--no-auth` 的 `serve --public-mode`：
 
 ```dotenv
 FUSION_ACCESS_USERNAME=your-name
@@ -95,8 +103,9 @@ Windows 上也可以一次启动管道网站、评测页面和临时 Tunnel；�
 # 不再需要时：.\stop-web-services.ps1
 ```
 
-外网模式会启用站内登录与 12 小时安全会话、限制等待／运行任务数量、锁定模型 Base URL 与报告 Provider、禁止网页
-覆盖服务器的 Obsidian 路径，并对生成 HTML 添加浏览器沙箱和安全响应头。临时 Tunnel 地址会变化；长期
+默认外网启动不再显示登录页；站点仍限制等待／运行任务数量、要求访问者提供自己的 API Key、锁定模型
+Base URL 与报告 Provider、禁止网页覆盖服务器的 Obsidian 路径，并对生成 HTML 添加浏览器沙箱和安全响应头。
+如使用认证模式，则启用 12 小时安全会话。临时 Tunnel 地址会变化；长期
 作品展示应改用带域名、访问策略和持久化配置的正式部署。不要把无 TLS 的端口直接映射到公网。
 
 配置 `FUSION_ADMIN_TOKEN` 后，可以使用 `/login#admin=<token>` 建立 30 天管理员会话。浏览器会在请求前
