@@ -111,6 +111,9 @@ def test_web_ui_contains_live_progress_and_persisted_history_controls():
     assert "/api/history?limit=60" in html
     assert 'sandbox="allow-scripts allow-downloads"' in html
     assert "公开访问模式 · 自带 Key" in html
+    assert "双击记录查看完整知识树与详细报告" in html
+    assert "data-history-open=" in html
+    assert "card.addEventListener('dblclick'" in html
 
 
 def test_public_mode_can_disable_login_without_disabling_server_locks(tmp_path):

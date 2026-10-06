@@ -51,6 +51,12 @@ def test_tree_html_binds_nodes_to_report_ranges_without_video_seek(tmp_path):
     assert 'data-start-ms="10000"' in document
     assert "00:10–00:20" in document
     assert "best.el.scrollIntoView" in document
+    assert 'id="splitter"' in document
+    assert 'role="separator"' in document
+    assert "拖动调整两侧宽度；双击恢复默认比例" in document
+    assert "splitter?.addEventListener('pointerdown'" in document
+    assert "splitter?.addEventListener('keydown'" in document
+    assert "setSplit(42)" in document
     assert "不跳转原视频" in document
     assert "bilibili.com/video" not in document
     report = (tmp_path / "report.html").read_text(encoding="utf-8")
@@ -74,4 +80,5 @@ def test_tree_only_html_has_no_report_frame(tmp_path):
     )
     document = output.read_text(encoding="utf-8")
     assert 'id="report-frame"' not in document
+    assert 'id="splitter"' not in document
     assert 'data-line-start="1"' in document

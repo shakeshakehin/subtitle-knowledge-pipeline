@@ -233,8 +233,13 @@ def render_tree_html(
         for unit in units
     }
     report_panel = (
+        '<div id="splitter" class="splitter" role="separator" tabindex="0" '
+        'aria-label="调整知识树与详细报告宽度" aria-orientation="vertical" '
+        'aria-valuemin="22" aria-valuemax="78" aria-valuenow="42" '
+        'title="拖动调整两侧宽度；双击恢复默认比例">'
+        '<span aria-hidden="true"></span></div>'
         '<main class="report-pane"><div class="report-toolbar">'
-        '<strong>详细报告</strong><span id="match-status">点击左侧节点定位到报告内容</span>'
+        '<strong>详细报告</strong><span id="match-status">点击左侧节点定位；拖动中线调整比例</span>'
         '<button id="clear-match" type="button">清除定位</button></div>'
         f'<iframe id="report-frame" title="详细报告" src="{html.escape(report_filename or "")}"></iframe></main>'
         if linked
@@ -251,7 +256,7 @@ def render_tree_html(
 <style>
 :root{{--ink:#18252f;--muted:#6b7780;--line:#cfdae1;--paper:#f5f3ee;--blue:#1d5f82;--blue-soft:#dcecf4;--accent:#f06b4f;--panel:#fff}}
 *{{box-sizing:border-box}} html,body{{margin:0;min-height:100%;font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:var(--ink);background:var(--paper)}}
-.app{{display:grid;grid-template-columns:minmax(440px,42vw) 1fr;height:100vh;overflow:hidden}} .app:not(.linked){{display:block;height:auto;min-height:100vh}}
+.app{{--tree-width:42%;display:grid;grid-template-columns:var(--tree-width) 10px minmax(0,1fr);height:100vh;overflow:hidden}} .app:not(.linked){{display:block;height:auto;min-height:100vh}}
 .tree-pane{{overflow:auto;padding:24px 26px 60px;background:linear-gradient(150deg,#f7f4ee,#eef3f4)}} .app:not(.linked) .tree-pane{{max-width:1280px;margin:auto}}
 .eyebrow{{font-size:12px;letter-spacing:.16em;color:var(--blue);font-weight:800}} h1{{font-size:28px;line-height:1.25;margin:8px 0}} .thesis{{margin:0 0 22px;color:#3c4a52;line-height:1.7}}
 .root-card{{padding:18px 20px;border-radius:16px;background:#173b51;color:#fff;box-shadow:0 10px 26px #173b5122;margin-bottom:18px}} .root-card small{{display:block;margin-top:8px;color:#cfe1ea}}
@@ -262,8 +267,9 @@ def render_tree_html(
 .node-card{{display:grid;grid-template-columns:auto 1fr auto;gap:5px 9px;width:100%;padding:11px 13px;border-radius:11px;background:var(--panel);box-shadow:0 3px 12px #23343e12;border:1px solid transparent}} button.node-card:hover,button.branch-title:hover{{outline:3px solid #f06b4f33}} .node-card:focus-visible,.branch-title:focus-visible{{outline:3px solid var(--accent)}}
 .node-kind{{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--blue);background:var(--blue-soft);padding:3px 6px;border-radius:99px;align-self:start}} .node-card strong{{font-size:14px;line-height:1.5}} .node-time{{font-size:11px;color:var(--muted);white-space:nowrap}} .node-card small{{grid-column:2/4;color:#526069;line-height:1.55}}
 .children{{margin-left:10px}} .summary{{margin-top:24px;padding:18px;border-radius:14px;background:#fff7e8;border:1px solid #edd9ae}} .summary h2{{margin:0 0 10px;font-size:18px}} .summary li{{margin:8px 0;line-height:1.6}} .summary li span{{display:block;font-size:11px;color:var(--muted)}}
+.splitter{{position:relative;z-index:5;display:grid;place-items:center;cursor:col-resize;touch-action:none;background:#d5dde0;border-left:1px solid #c2cdd1;border-right:1px solid #c2cdd1;outline:none}} .splitter span{{width:3px;height:52px;border-radius:99px;background:#8da1aa;box-shadow:0 0 0 4px #ffffff80}} .splitter:hover,.splitter:focus-visible,.splitter.dragging{{background:#bed9e4}} .splitter:hover span,.splitter:focus-visible span,.splitter.dragging span{{background:var(--blue)}} body.resizing{{cursor:col-resize;user-select:none}}
 .report-pane{{min-width:0;background:#d9dde0;display:grid;grid-template-rows:auto 1fr}} .report-toolbar{{display:flex;align-items:center;gap:14px;min-height:54px;padding:9px 16px;background:#fff;border-bottom:1px solid #ccd4d8}} .report-toolbar span{{flex:1;color:var(--muted);font-size:13px}} .report-toolbar button{{border:1px solid #bdc8ce;background:#fff;border-radius:8px;padding:7px 11px;cursor:pointer}} iframe{{width:100%;height:100%;border:0;background:white}}
-@media(max-width:900px){{.app{{grid-template-columns:1fr;height:auto;overflow:visible}}.tree-pane{{max-height:none}}.report-pane{{height:82vh}}}}
+@media(max-width:900px){{.app{{display:block;height:auto;overflow:visible}}.tree-pane{{max-height:none}}.splitter{{display:none}}.report-pane{{height:82vh}}}}
 </style>
 </head>
 <body>
@@ -280,8 +286,47 @@ def render_tree_html(
 </div>
 <script>
 const UNIT_TIMES={data_json};
+const app=document.querySelector('.app');
+const splitter=document.getElementById('splitter');
 const frame=document.getElementById('report-frame');
 const status=document.getElementById('match-status');
+const clampSplit=value=>Math.max(22,Math.min(78,value));
+function setSplit(value){{
+  if(!app||!splitter)return;
+  const percent=clampSplit(Number(value)||42);
+  app.style.setProperty('--tree-width',`${{percent}}%`);
+  splitter.setAttribute('aria-valuenow',String(Math.round(percent)));
+}}
+function splitFromPointer(clientX){{
+  if(!app||matchMedia('(max-width:900px)').matches)return;
+  const bounds=app.getBoundingClientRect();
+  setSplit((clientX-bounds.left)/bounds.width*100);
+}}
+let resizing=false;
+splitter?.addEventListener('pointerdown',event=>{{
+  resizing=true;
+  splitter.classList.add('dragging');
+  document.body.classList.add('resizing');
+  splitter.setPointerCapture(event.pointerId);
+  splitFromPointer(event.clientX);
+  event.preventDefault();
+}});
+splitter?.addEventListener('pointermove',event=>{{if(resizing)splitFromPointer(event.clientX);}});
+function stopResizing(event){{
+  if(!resizing)return;
+  resizing=false;
+  splitter?.classList.remove('dragging');
+  document.body.classList.remove('resizing');
+  if(event?.pointerId!=null&&splitter?.hasPointerCapture(event.pointerId))splitter.releasePointerCapture(event.pointerId);
+}}
+splitter?.addEventListener('pointerup',stopResizing);
+splitter?.addEventListener('pointercancel',stopResizing);
+splitter?.addEventListener('dblclick',()=>setSplit(42));
+splitter?.addEventListener('keydown',event=>{{
+  const current=Number(splitter.getAttribute('aria-valuenow'))||42;
+  const next=event.key==='ArrowLeft'?current-3:event.key==='ArrowRight'?current+3:event.key==='Home'?22:event.key==='End'?78:null;
+  if(next!=null){{setSplit(next);event.preventDefault();}}
+}});
 const splitIds=value=>(value||'').split(/[\\s,;]+/).filter(Boolean);
 const rangeFor=ids=>{{
   const rows=ids.map(id=>UNIT_TIMES[id]).filter(Boolean);
