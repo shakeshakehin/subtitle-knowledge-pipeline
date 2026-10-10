@@ -26,7 +26,7 @@ def extract_bvid(value: str) -> str:
     return match.group(0)
 
 
-def _page_number(value: str) -> int:
+def extract_page_number(value: str) -> int:
     try:
         return max(1, int(parse_qs(urlparse(value).query).get("p", ["1"])[0]))
     except (TypeError, ValueError):
@@ -61,7 +61,7 @@ def _prefer_subtitle(subtitles: list[dict]) -> dict:
 
 async def fetch_bilibili(value: str, credential_path: Path) -> BiliResult:
     bvid = extract_bvid(value)
-    page_number = _page_number(value)
+    page_number = extract_page_number(value)
     video = bili_video.Video(bvid=bvid, credential=_credential(credential_path))
     info = await video.get_info()
     pages = await video.get_pages()

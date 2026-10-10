@@ -9,11 +9,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-from .bili import extract_bvid, fetch_bilibili
+from .bili import extract_bvid, extract_page_number, fetch_bilibili
 from .canonical import SourceUnit, source_fingerprint, units_from_plain_text, write_canonical
+from .compact_tree import render_compact_tree_html
 from .config import Settings
+from .editorial_report import generate_editorial_report
+from .efficient_report import generate_efficient_report
 from .interactive import render_tree_html
-from .mindmap import inspect_svg_layout, render_png, render_svg
+from .mindmap import inspect_svg_layout, render_overview_svg, render_png, render_svg
 from .notes import (
     ModelStageError,
     generate_outline,
@@ -22,6 +25,7 @@ from .notes import (
     validate_outline,
     validate_skeleton,
 )
+from .observability import PipelineTelemetry
 from .obsidian import publish_to_obsidian, safe_name
 from .report import generate_report
 from .trace import RunTrace
@@ -77,36 +81,52 @@ class FusionPipeline:
                 "description": "",
                 "bvid": local_bvid,
             }
-            if force or not (cache / "canonical-transcript.jsonl").is_file():
+            cache_ready = (cache / "canonical-transcript.jsonl").is_file() and (
+                cache / "source.info.json"
+            ).is_file()
+            if force or not cache_ready:
                 write_canonical(units, cache)
                 (cache / "source.info.json").write_text(
                     json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8"
                 )
+            metadata["transcript_cache"] = {
+                "status": "refreshed" if force else "hit" if cache_ready else "stored",
+                "key": cache.name,
+            }
             return units, metadata
 
         bvid = extract_bvid(source)
-        page = 1
-        if "?p=" in source:
-            try:
-                page = int(source.split("?p=", 1)[1].split("&", 1)[0])
-            except ValueError:
-                page = 1
+        page = extract_page_number(source)
         cache = self.settings.project_root / "cache" / f"{bvid}-p{page}"
-        if (
-            not force
-            and (cache / "canonical-transcript.jsonl").is_file()
-            and (cache / "source.info.json").is_file()
-        ):
-            return _read_units(cache / "canonical-transcript.jsonl"), json.loads(
-                (cache / "source.info.json").read_text(encoding="utf-8")
-            )
+        if not force:
+            try:
+                if (cache / "canonical-transcript.jsonl").is_file() and (
+                    cache / "source.info.json"
+                ).is_file():
+                    units = _read_units(cache / "canonical-transcript.jsonl")
+                    metadata = json.loads(
+                        (cache / "source.info.json").read_text(encoding="utf-8")
+                    )
+                    if not units or not isinstance(metadata, dict):
+                        raise ValueError("字幕缓存为空或元数据无效")
+                    metadata["transcript_cache"] = {"status": "hit", "key": cache.name}
+                    return units, metadata
+            except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                # A partial or damaged cache is never trusted. Fetch it again and
+                # replace the cache before any LLM work starts.
+                pass
         fetched = asyncio.run(fetch_bilibili(source, self.settings.credential_path))
         cache.mkdir(parents=True, exist_ok=True)
         write_canonical(fetched.units, cache)
         (cache / "source.info.json").write_text(
             json.dumps(fetched.metadata, ensure_ascii=False, indent=2), encoding="utf-8"
         )
-        return fetched.units, fetched.metadata
+        metadata = dict(fetched.metadata)
+        metadata["transcript_cache"] = {
+            "status": "refreshed" if force else "stored",
+            "key": cache.name,
+        }
+        return fetched.units, metadata
 
     def _reuse_outline(
         self, current_run: Path, fingerprint: str, units: list[SourceUnit]
@@ -217,6 +237,7 @@ class FusionPipeline:
         uploader: str | None = None,
         source_url: str | None = None,
         report_mode: str = "standard",
+        report_engine: str = "legacy",
         force: bool = False,
         publish: bool = True,
         outputs: set[str] | tuple[str, ...] | list[str] | None = None,
@@ -226,11 +247,25 @@ class FusionPipeline:
         unknown_outputs = requested_outputs - {"tree", "report"}
         if unknown_outputs or not requested_outputs:
             raise ValueError(f"outputs 必须从 tree/report 中选择：{sorted(unknown_outputs)}")
+        if report_engine not in {"legacy", "efficient", "editorial"}:
+            raise ValueError("report_engine 必须是 legacy、efficient 或 editorial")
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")[:19]
         source_hint = Path(source).stem if Path(source).is_file() else extract_bvid(source)
         run_dir = self.settings.project_root / "runs" / f"{timestamp}-{safe_name(source_hint, 30)}"
         run_dir.mkdir(parents=True, exist_ok=False)
-        trace = RunTrace(run_dir)
+        telemetry = PipelineTelemetry.from_settings(self.settings, run_dir)
+        telemetry.start_run(
+            input_data={
+                "source": source,
+                "source_url": source_url or "",
+                "requested_outputs": sorted(requested_outputs),
+                "report_mode": report_mode,
+                "report_engine": report_engine,
+                "publish_to_obsidian": publish,
+            },
+            metadata={"run_id": run_dir.name, "pipeline": "fusion-video-pipeline"},
+        )
+        trace = RunTrace(run_dir, telemetry=telemetry)
         notes_started_at: float | None = None
         trace.status("RUNNING", "source")
         trace.add("source", "start", source=source)
@@ -252,6 +287,7 @@ class FusionPipeline:
             metadata["source_fingerprint"] = source_fingerprint(units)
             metadata["canonical_unit_count"] = len(units)
             metadata["report_mode"] = report_mode
+            metadata["report_engine"] = report_engine
             metadata["outputs"] = sorted(requested_outputs)
             write_canonical(units, run_dir)
             (run_dir / "source.info.json").write_text(
@@ -264,21 +300,35 @@ class FusionPipeline:
                 json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8"
             )
             trace.add(
-                "source", "complete", units=len(units), fingerprint=metadata["source_fingerprint"]
+                "source",
+                "complete",
+                units=len(units),
+                fingerprint=metadata["source_fingerprint"],
+                source_type=metadata.get("source_type"),
+                title=metadata.get("title"),
+                transcript_cache=metadata.get("transcript_cache"),
+            )
+            cache_status = (metadata.get("transcript_cache") or {}).get("status")
+            source_message = (
+                f"已复用本地字幕缓存：{len(units)} 个内容单元"
+                if cache_status == "hit"
+                else f"字幕已保存到本地缓存：{len(units)} 个内容单元"
             )
             _notify(
                 progress,
                 phase="source",
                 event="complete",
-                message=f"字幕已准备：{len(units)} 个内容单元",
+                message=source_message,
                 progress=8,
                 units=len(units),
+                cache_status=cache_status,
             )
 
             outline = None
             report = None
             usage_data: dict[str, dict] = {}
             mindmap_inspection = None
+            report_started_at: float | None = None
             if "tree" in requested_outputs:
                 trace.status("RUNNING", "notes")
                 trace.add("notes", "start", model=self.settings.note_model)
@@ -332,6 +382,7 @@ class FusionPipeline:
                         progress=progress,
                         existing_skeleton=existing_skeleton,
                         existing_skeleton_usage=existing_skeleton_usage,
+                        telemetry=telemetry,
                     )
                 notes_usage = {
                     **notes_usage,
@@ -349,6 +400,19 @@ class FusionPipeline:
                 (run_dir / "usage.json").write_text(
                     json.dumps(usage_data, ensure_ascii=False, indent=2), encoding="utf-8"
                 )
+                trace.add(
+                    "notes",
+                    "complete",
+                    **outline_metrics(outline),
+                    usage=notes_usage,
+                    artifacts={"skeleton": "skeleton.json", "outline": "outline.json"},
+                )
+                trace.add(
+                    "render_tree",
+                    "start",
+                    outline="outline.json",
+                    outputs=["notes.md", "mindmap.svg", "mindmap.png"],
+                )
                 _notify(
                     progress,
                     phase="render_tree",
@@ -359,13 +423,30 @@ class FusionPipeline:
                 render_markdown(outline, metadata, run_dir / "notes.md")
                 render_svg(outline, run_dir / "mindmap.svg")
                 render_png(run_dir / "mindmap.svg", run_dir / "mindmap.png")
+                render_overview_svg(outline, run_dir / "mindmap-overview.svg")
+                render_png(
+                    run_dir / "mindmap-overview.svg", run_dir / "mindmap-overview.png"
+                )
                 mindmap_inspection = inspect_svg_layout(run_dir / "mindmap.svg")
+                overview_inspection = inspect_svg_layout(run_dir / "mindmap-overview.svg")
+                mindmap_inspection["overview"] = overview_inspection
                 (run_dir / "mindmap-inspection.json").write_text(
                     json.dumps(mindmap_inspection, ensure_ascii=False, indent=2), encoding="utf-8"
                 )
-                if mindmap_inspection["findings"]:
+                if mindmap_inspection["findings"] or overview_inspection["findings"]:
                     raise RuntimeError("导图存在文字越界，已停止发布")
-                trace.add("notes", "complete", **outline_metrics(outline))
+                trace.add(
+                    "render_tree",
+                    "complete",
+                    inspection=mindmap_inspection,
+                    artifacts=[
+                        "notes.md",
+                        "mindmap.svg",
+                        "mindmap.png",
+                        "mindmap-overview.svg",
+                        "mindmap-overview.png",
+                    ],
+                )
                 _notify(
                     progress,
                     phase="render_tree",
@@ -381,26 +462,61 @@ class FusionPipeline:
                     "start",
                     provider=self.settings.report_provider,
                     model=self.settings.report_model,
+                    engine=report_engine,
                 )
                 stage_started = time.perf_counter()
+                report_started_at = stage_started
                 _notify(
                     progress,
                     phase="report",
                     event="start",
-                    message="生成详细阅读报告并进行版面检查",
+                    message={
+                        "editorial": "生成编辑型报告：编辑策划、整篇写作、终稿复核",
+                        "efficient": "生成高效结构化报告：先规划覆盖账本，再写完整内容",
+                        "legacy": "生成现有 Agent 精读报告并进行版面检查",
+                    }[report_engine],
                     progress=84 if "tree" in requested_outputs else 20,
                 )
-                report = generate_report(
-                    run_dir,
-                    provider=self.settings.report_provider,
-                    model=self.settings.report_model,
-                    api_key=self.settings.report_api_key,
-                    report_mode=report_mode,
-                )
+                if report_engine == "editorial":
+                    report = generate_editorial_report(
+                        run_dir,
+                        units,
+                        metadata,
+                        base_url=self.settings.note_base_url,
+                        model=self.settings.report_model,
+                        api_key=self.settings.report_api_key,
+                        report_mode=report_mode,
+                        outline=outline,
+                        progress=progress,
+                        telemetry=telemetry,
+                    )
+                elif report_engine == "efficient":
+                    report = generate_efficient_report(
+                        run_dir,
+                        units,
+                        metadata,
+                        base_url=self.settings.note_base_url,
+                        model=self.settings.report_model,
+                        api_key=self.settings.report_api_key,
+                        report_mode=report_mode,
+                        outline=outline,
+                        progress=progress,
+                        telemetry=telemetry,
+                    )
+                else:
+                    report = generate_report(
+                        run_dir,
+                        provider=self.settings.report_provider,
+                        model=self.settings.report_model,
+                        api_key=self.settings.report_api_key,
+                        report_mode=report_mode,
+                        telemetry=telemetry,
+                    )
                 usage_data["report"] = {
                     **report["usage"],
                     "provider": self.settings.report_provider,
                     "model": self.settings.report_model,
+                    "engine": report_engine,
                     "elapsed_seconds": round(time.perf_counter() - stage_started, 3),
                 }
                 (run_dir / "usage.json").write_text(
@@ -411,6 +527,22 @@ class FusionPipeline:
                     "complete",
                     findings=len(report["inspection"].get("findings", [])),
                     source_id_count=report["inspection"].get("source_id_count"),
+                    usage=usage_data["report"],
+                    agent_workflow={
+                        key: value
+                        for key, value in report.get("agent_summary", {}).items()
+                        if key != "steps"
+                    },
+                    engine=report_engine,
+                    artifacts=report.get(
+                        "artifacts",
+                        [
+                            "report.html",
+                            "report.png",
+                            "report-inspection.json",
+                            "report-agent-summary.json",
+                        ],
+                    ),
                 )
                 _notify(
                     progress,
@@ -421,6 +553,12 @@ class FusionPipeline:
                 )
 
             if outline is not None:
+                trace.add(
+                    "link",
+                    "start",
+                    tree="outline.json",
+                    report="report.html" if report is not None else None,
+                )
                 _notify(
                     progress,
                     phase="link",
@@ -432,8 +570,18 @@ class FusionPipeline:
                     outline,
                     units,
                     metadata,
+                    run_dir / "tree-classic.html",
+                    report_filename="report.html" if report is not None else None,
+                )
+                render_compact_tree_html(
+                    outline,
+                    units,
+                    metadata,
                     run_dir / "tree.html",
                     report_filename="report.html" if report is not None else None,
+                )
+                trace.add(
+                    "link", "complete", artifacts=["tree.html", "tree-classic.html"]
                 )
             (run_dir / "usage.json").write_text(
                 json.dumps(usage_data, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -459,6 +607,11 @@ class FusionPipeline:
                 "outputs": sorted(requested_outputs),
                 "source_fingerprint": metadata["source_fingerprint"],
                 "canonical_unit_count": len(units),
+                "report_engine": report_engine if report is not None else None,
+                "transcript_cache": metadata.get("transcript_cache"),
+                "subtitle": str(run_dir / "subtitle.txt"),
+                "transcript": str(run_dir / "transcript.md"),
+                "canonical_transcript": str(run_dir / "canonical-transcript.jsonl"),
                 "usage": usage_data,
                 "obsidian": obsidian,
             }
@@ -467,7 +620,10 @@ class FusionPipeline:
                     notes=str(run_dir / "notes.md"),
                     mindmap=str(run_dir / "mindmap.png"),
                     mindmap_svg=str(run_dir / "mindmap.svg"),
+                    mindmap_overview=str(run_dir / "mindmap-overview.png"),
+                    mindmap_overview_svg=str(run_dir / "mindmap-overview.svg"),
                     tree_html=str(run_dir / "tree.html"),
+                    tree_classic_html=str(run_dir / "tree-classic.html"),
                     tree_metrics=outline_metrics(outline),
                     mindmap_inspection=mindmap_inspection,
                 )
@@ -477,6 +633,14 @@ class FusionPipeline:
                     report_png=report["png"],
                     inspection=report["inspection"],
                 )
+                for source_key, result_key in (
+                    ("plan", "report_plan"),
+                    ("document", "report_document"),
+                    ("review", "report_review"),
+                    ("summary", "report_summary"),
+                ):
+                    if report.get(source_key):
+                        result[result_key] = report[source_key]
             trace.status("COMPLETE", "done", result=result)
             _notify(
                 progress,
@@ -499,13 +663,25 @@ class FusionPipeline:
             )
             if isinstance(exc, ModelStageError):
                 failed_usage = dict(exc.usage)
-                if notes_started_at is not None:
-                    failed_usage["elapsed_seconds"] = round(
-                        time.perf_counter() - notes_started_at, 3
-                    )
+                if str(exc.stage).startswith(("report-efficient", "report-editorial")):
+                    if report_started_at is not None:
+                        failed_usage["elapsed_seconds"] = round(
+                            time.perf_counter() - report_started_at, 3
+                        )
+                    usage_data["report"] = {
+                        **failed_usage,
+                        "provider": self.settings.report_provider,
+                        "model": self.settings.report_model,
+                        "engine": report_engine,
+                    }
+                else:
+                    if notes_started_at is not None:
+                        failed_usage["elapsed_seconds"] = round(
+                            time.perf_counter() - notes_started_at, 3
+                        )
+                    usage_data["notes"] = failed_usage
                 (run_dir / "usage.json").write_text(
-                    json.dumps({"notes": failed_usage}, ensure_ascii=False, indent=2),
-                    encoding="utf-8",
+                    json.dumps(usage_data, ensure_ascii=False, indent=2), encoding="utf-8"
                 )
             trace.add("pipeline", "failed", error_type=type(exc).__name__, error=str(exc))
             trace.status("FAILED", "error", error_type=type(exc).__name__, error=str(exc))
@@ -553,13 +729,24 @@ class FusionPipeline:
         render_markdown(outline, metadata, run_dir / "notes.md")
         render_svg(outline, run_dir / "mindmap.svg")
         render_png(run_dir / "mindmap.svg", run_dir / "mindmap.png")
+        render_overview_svg(outline, run_dir / "mindmap-overview.svg")
+        render_png(run_dir / "mindmap-overview.svg", run_dir / "mindmap-overview.png")
         mindmap_inspection = inspect_svg_layout(run_dir / "mindmap.svg")
+        overview_inspection = inspect_svg_layout(run_dir / "mindmap-overview.svg")
+        mindmap_inspection["overview"] = overview_inspection
         (run_dir / "mindmap-inspection.json").write_text(
             json.dumps(mindmap_inspection, ensure_ascii=False, indent=2), encoding="utf-8"
         )
-        if mindmap_inspection["findings"]:
+        if mindmap_inspection["findings"] or overview_inspection["findings"]:
             raise RuntimeError("导图存在文字越界，已停止发布")
         render_tree_html(
+            outline,
+            units,
+            metadata,
+            run_dir / "tree-classic.html",
+            report_filename="report.html" if (run_dir / "report.html").is_file() else None,
+        )
+        render_compact_tree_html(
             outline,
             units,
             metadata,
@@ -579,6 +766,8 @@ class FusionPipeline:
             "mindmap_inspection": mindmap_inspection,
             "notes": str(run_dir / "notes.md"),
             "mindmap": str(run_dir / "mindmap.png"),
+            "mindmap_overview": str(run_dir / "mindmap-overview.png"),
             "tree_html": str(run_dir / "tree.html"),
+            "tree_classic_html": str(run_dir / "tree-classic.html"),
             "obsidian": obsidian,
         }

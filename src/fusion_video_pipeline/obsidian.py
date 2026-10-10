@@ -43,7 +43,19 @@ def publish_to_obsidian(run_dir: Path, metadata: dict, root: Path) -> dict[str, 
     candidates = {
         "mindmap_svg": (run_dir / "mindmap.svg", destination / f"{title}_導圖.svg"),
         "mindmap_png": (run_dir / "mindmap.png", destination / f"{title}_導圖.png"),
+        "mindmap_overview_svg": (
+            run_dir / "mindmap-overview.svg",
+            destination / f"{title}_概覽導圖.svg",
+        ),
+        "mindmap_overview_png": (
+            run_dir / "mindmap-overview.png",
+            destination / f"{title}_概覽導圖.png",
+        ),
         "tree_html": (run_dir / "tree.html", destination / f"{title}_交互樹.html"),
+        "tree_classic_html": (
+            run_dir / "tree-classic.html",
+            destination / f"{title}_舊版交互樹.html",
+        ),
         "report_html": (run_dir / "report.html", destination / f"{title}_閱讀報告.html"),
         "report_png": (run_dir / "report.png", destination / f"{title}_閱讀報告.png"),
     }
@@ -52,10 +64,15 @@ def publish_to_obsidian(run_dir: Path, metadata: dict, root: Path) -> dict[str, 
         for key, (source, target) in candidates.items()
         if (copied := _copy_if_present(source, target)) is not None
     }
-    if "tree_html" in files and "report_html" in files:
-        tree_html = files["tree_html"].read_text(encoding="utf-8")
-        tree_html = tree_html.replace('src="report.html"', f'src="{files["report_html"].name}"')
-        files["tree_html"].write_text(tree_html, encoding="utf-8")
+    if "report_html" in files:
+        for key in ("tree_html", "tree_classic_html"):
+            if key not in files:
+                continue
+            tree_html = files[key].read_text(encoding="utf-8")
+            tree_html = tree_html.replace(
+                'src="report.html"', f'src="{files["report_html"].name}"'
+            )
+            files[key].write_text(tree_html, encoding="utf-8")
     for name in (
         "canonical-transcript.jsonl",
         "transcript.md",
@@ -65,6 +82,16 @@ def publish_to_obsidian(run_dir: Path, metadata: dict, root: Path) -> dict[str, 
         "usage.json",
         "source.info.json",
         "report-inspection.json",
+        "report-agent-summary.json",
+        "report-efficient-plan.json",
+        "report-efficient-document.json",
+        "report-efficient-summary.json",
+        "report-editorial-plan.json",
+        "report-editorial-document.json",
+        "report-editorial-revised.json",
+        "report-editorial-revision.json",
+        "report-editorial-review.json",
+        "report-editorial-summary.json",
         "mindmap-inspection.json",
         "run.trace.jsonl",
         "status.json",
@@ -81,8 +108,12 @@ def publish_to_obsidian(run_dir: Path, metadata: dict, root: Path) -> dict[str, 
         links.append(f"- [打开 HTML 阅读报告]({files['report_html'].name})")
     if "mindmap_svg" in files:
         links.append(f"- [[{files['mindmap_svg'].name}|打开 SVG 导图]]")
+    if "tree_classic_html" in files:
+        links.append(f"- [打开旧版交互树]({files['tree_classic_html'].name})")
     previews = []
-    if "mindmap_png" in files:
+    if "mindmap_overview_png" in files:
+        previews.append(f"![[{files['mindmap_overview_png'].name}|900]]")
+    elif "mindmap_png" in files:
         previews.append(f"![[{files['mindmap_png'].name}|900]]")
     if "report_png" in files:
         previews.extend(("## 完整閱讀報告", f"![[{files['report_png'].name}|720]]"))

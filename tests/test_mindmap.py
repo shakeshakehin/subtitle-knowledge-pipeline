@@ -2,6 +2,7 @@ from fusion_video_pipeline.mindmap import (
     PAD_X,
     TEXT_WIDTH_SAFETY,
     _layout,
+    _overview_data,
     _style,
     _text_width,
     render_svg,
@@ -61,3 +62,14 @@ def test_measured_cards_keep_browser_font_fallback_safety_space():
         )
         if min_width < widest + 2 * PAD_X + TEXT_WIDTH_SAFETY < max_width:
             assert node.width - 2 * PAD_X - widest >= TEXT_WIDTH_SAFETY
+
+
+def test_overview_map_keeps_only_root_points_and_hidden_counts():
+    compact = _overview_data(tree_data())
+    points = compact["outline"][0]["points"]
+
+    assert compact["summary"] == []
+    assert [point["id"] for point in points] == ["p1", "p4"]
+    assert points[0]["title"].endswith("+2")
+    assert points[0]["detail"] == ""
+    assert all(point["parent_id"] is None and point["level"] == 1 for point in points)

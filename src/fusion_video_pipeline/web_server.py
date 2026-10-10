@@ -20,25 +20,50 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from .config import Settings
+from .credential_store import ApiCredentialStore, CredentialStoreError
 from .obsidian import safe_name
 from .pipeline import FusionPipeline
 
 ARTIFACT_KEYS = (
     "tree_html",
+    "tree_classic_html",
     "report_html",
     "mindmap",
     "mindmap_svg",
+    "mindmap_overview",
+    "mindmap_overview_svg",
     "report_png",
+    "report_plan",
+    "report_document",
+    "report_review",
+    "report_summary",
     "notes",
+    "subtitle",
+    "transcript",
+    "canonical_transcript",
 )
 
 HISTORY_ARTIFACTS = {
     "tree.html": "tree_html",
+    "tree-classic.html": "tree_classic_html",
     "report.html": "report_html",
     "mindmap.png": "mindmap",
     "mindmap.svg": "mindmap_svg",
+    "mindmap-overview.png": "mindmap_overview",
+    "mindmap-overview.svg": "mindmap_overview_svg",
     "report.png": "report_png",
+    "report-efficient-plan.json": "report_plan",
+    "report-efficient-document.json": "report_document",
+    "report-efficient-summary.json": "report_summary",
+    "report-editorial-plan.json": "report_plan",
+    "report-editorial-document.json": "report_document",
+    "report-editorial-revised.json": "report_document",
+    "report-editorial-review.json": "report_review",
+    "report-editorial-summary.json": "report_summary",
     "notes.md": "notes",
+    "subtitle.txt": "subtitle",
+    "transcript.md": "transcript",
+    "canonical-transcript.jsonl": "canonical_transcript",
 }
 
 
@@ -188,12 +213,15 @@ class JobManager:
     def __init__(self, settings: Settings, *, public_mode: bool = False):
         self.settings = settings
         self.public_mode = public_mode
+        self.credential_store = ApiCredentialStore(
+            settings.project_root / ".runtime" / "api-credentials.json"
+        )
         self.jobs: dict[str, dict] = {}
         self.lock = threading.Lock()
         # Model work is intentionally serialized to keep local cost and machine load predictable.
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="fusion-web")
 
-    def submit(self, payload: dict) -> dict:
+    def submit(self, payload: dict, *, allow_saved_api_key: bool | None = None) -> dict:
         with self.lock:
             active_jobs = sum(
                 job.get("state") in {"queued", "running"} for job in self.jobs.values()
@@ -216,11 +244,18 @@ class JobManager:
         report_mode = str(payload.get("report_mode") or "standard")
         if report_mode not in {"standard", "brief"}:
             raise ValueError("报告模式无效")
-        settings = self.request_settings(payload)
+        report_engine = str(payload.get("report_engine") or "editorial")
+        if report_engine not in {"legacy", "efficient", "editorial"}:
+            raise ValueError("报告引擎无效")
+        if allow_saved_api_key is None:
+            allow_saved_api_key = not self.public_mode
+        settings, credential_to_save = self._request_settings(
+            payload, allow_saved_api_key=allow_saved_api_key
+        )
         if "tree" in outputs and not settings.note_api_key:
-            raise ValueError("生成知识树需要填写 Tree API Key 或在 .env 配置 NOTE_API_KEY")
+            raise ValueError("生成知识树需要输入新的 API Key，或选择一把已保存的 API Key")
         if "report" in outputs and not settings.report_api_key:
-            raise ValueError("生成详细报告需要填写 Report API Key 或在 .env 配置 REPORT_API_KEY")
+            raise ValueError("生成详细报告需要输入新的 API Key，或选择一把已保存的 API Key")
         now = time.time()
         public_job = {
             "id": job_id,
@@ -228,6 +263,7 @@ class JobManager:
             "stage": "等待执行",
             "created_at": now,
             "outputs": sorted(outputs),
+            "report_engine": report_engine if "report" in outputs else None,
             "source_type": source_type,
             "title": title or (Path(source).stem if source_type == "subtitle" else source),
             "progress": 0,
@@ -252,12 +288,25 @@ class JobManager:
             uploader,
             source_url,
             report_mode,
+            report_engine,
             outputs,
             bool(payload.get("save_to_obsidian")),
+            credential_to_save,
         )
         return dict(public_job)
 
-    def request_settings(self, payload: dict) -> Settings:
+    def request_settings(
+        self, payload: dict, *, allow_saved_api_key: bool | None = None
+    ) -> Settings:
+        if allow_saved_api_key is None:
+            allow_saved_api_key = not self.public_mode
+        return self._request_settings(
+            payload, allow_saved_api_key=allow_saved_api_key
+        )[0]
+
+    def _request_settings(
+        self, payload: dict, *, allow_saved_api_key: bool
+    ) -> tuple[Settings, str | None]:
         custom = payload.get("models") if isinstance(payload.get("models"), dict) else {}
         # In public mode, endpoint/provider and filesystem roots are server policy.
         # A remote request may still choose a model and provide its own in-memory key.
@@ -283,7 +332,34 @@ class JobManager:
             and note_base_url.rstrip("/")
             in {"https://api.deepseek.com", "https://api.deepseek.com/v1"}
         )
-        if shared_official_deepseek:
+        api_key_mode = str(custom.get("api_key_mode") or "request").strip().lower()
+        if api_key_mode not in {"request", "new", "saved"}:
+            raise ValueError("API Key 使用方式无效")
+        credential_to_save = None
+        if api_key_mode == "saved":
+            if not allow_saved_api_key:
+                raise ValueError("当前访问方式不允许使用本机保存的 API Key")
+            if not shared_official_deepseek:
+                raise ValueError("已保存 API Key 目前只支持 DeepSeek 官方端点")
+            saved_key = self.credential_store.load()
+            note_api_key = saved_key
+            report_api_key = saved_key
+        elif api_key_mode == "new" and shared_official_deepseek:
+            new_key = requested_note_key or requested_report_key
+            note_api_key = new_key
+            report_api_key = new_key
+            if bool(custom.get("save_api_key")):
+                if not allow_saved_api_key:
+                    raise ValueError("当前访问方式不允许保存 API Key")
+                if not new_key:
+                    raise ValueError("请先输入要保存的新 API Key")
+                credential_to_save = new_key
+        elif api_key_mode == "new":
+            if bool(custom.get("save_api_key")):
+                raise ValueError("安全保存目前只支持 DeepSeek 官方端点")
+            note_api_key = requested_note_key
+            report_api_key = requested_report_key
+        elif shared_official_deepseek:
             note_api_key = (
                 requested_note_key or requested_report_key or self.settings.note_api_key
             )
@@ -303,7 +379,7 @@ class JobManager:
             report_api_key=report_api_key,
             obsidian_root=obsidian_root,
         )
-        return settings
+        return settings, credential_to_save
 
     def _prepare_source(self, payload: dict, source_type: str) -> str:
         if source_type == "bilibili":
@@ -335,8 +411,10 @@ class JobManager:
         uploader: str | None,
         source_url: str | None,
         report_mode: str,
+        report_engine: str,
         outputs: set[str],
         publish: bool,
+        credential_to_save: str | None,
     ) -> None:
         started = time.time()
         self._update(job_id, state="running", stage="读取字幕并生成", started_at=started)
@@ -351,10 +429,28 @@ class JobManager:
                 uploader=uploader,
                 source_url=source_url,
                 report_mode=report_mode,
+                report_engine=report_engine,
                 publish=publish,
                 outputs=outputs,
                 progress=on_progress,
             )
+            credential_saved = False
+            credential_save_error = None
+            if credential_to_save:
+                try:
+                    self.credential_store.save(credential_to_save)
+                    credential_saved = True
+                except (CredentialStoreError, OSError, ValueError) as exc:
+                    credential_save_error = str(exc)
+                    self._progress(
+                        job_id,
+                        {
+                            "phase": "credential",
+                            "event": "warning",
+                            "message": f"成果已完成，但 API Key 未能安全保存：{exc}",
+                            "progress": 100,
+                        },
+                    )
             run_dir = Path(result["run_dir"]).resolve()
             artifacts = {}
             for key in ARTIFACT_KEYS:
@@ -374,6 +470,8 @@ class JobManager:
                 elapsed_seconds=round(time.time() - started, 2),
                 result={
                     **result,
+                    "credential_saved": credential_saved,
+                    "credential_save_error": credential_save_error,
                     "artifacts": artifacts,
                     "primary_url": primary,
                 },
@@ -492,6 +590,7 @@ class JobManager:
                     "id": run_dir.name,
                     "title": str(metadata.get("title") or outline.get("title") or run_dir.name),
                     "source_type": metadata.get("source_type"),
+                    "transcript_cache": metadata.get("transcript_cache"),
                     "outputs": outputs,
                     "state": state,
                     "stage": status.get("stage"),
@@ -506,6 +605,9 @@ class JobManager:
                     "reused_generation_calls": int(reused_generation.get("attempts") or 0),
                     "note_model": notes_usage.get("model"),
                     "report_model": report_usage.get("model"),
+                    "report_engine": metadata.get("report_engine")
+                    or report_usage.get("engine")
+                    or "legacy",
                     "thesis": outline.get("thesis"),
                     "summary": summary_text,
                     "error": status.get("error"),
@@ -633,6 +735,10 @@ class WebHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/config":
             settings = self.manager.settings
+            role = self._access_role()
+            saved_key_allowed = not self.manager.public_mode or (
+                self.access.enabled and role == "admin"
+            )
             self._json(
                 {
                     "note_base_url": settings.note_base_url,
@@ -644,7 +750,12 @@ class WebHandler(BaseHTTPRequestHandler):
                     "obsidian_root": "" if self.manager.public_mode else str(settings.obsidian_root),
                     "public_mode": self.manager.public_mode,
                     "auth_required": self.access.enabled,
-                    "access_role": self._access_role(),
+                    "access_role": role,
+                    "saved_api_key_allowed": saved_key_allowed,
+                    "saved_api_key_available": (
+                        saved_key_allowed and self.manager.credential_store.available()
+                    ),
+                    "saved_api_key_protection": "windows-dpapi-current-user",
                 }
             )
             return
@@ -785,9 +896,15 @@ class WebHandler(BaseHTTPRequestHandler):
             self._error(HTTPStatus.NOT_FOUND, "路径不存在")
             return
         try:
-            job = self.manager.submit(self._body())
+            role = self._access_role()
+            allow_saved_api_key = not self.manager.public_mode or (
+                self.access.enabled and role == "admin"
+            )
+            job = self.manager.submit(
+                self._body(), allow_saved_api_key=allow_saved_api_key
+            )
             self._json(job, HTTPStatus.ACCEPTED)
-        except (ValueError, json.JSONDecodeError) as exc:
+        except (ValueError, json.JSONDecodeError, CredentialStoreError) as exc:
             self._error(HTTPStatus.BAD_REQUEST, str(exc))
         except Exception as exc:
             self._error(HTTPStatus.INTERNAL_SERVER_ERROR, f"{type(exc).__name__}: {exc}")
@@ -811,7 +928,10 @@ def serve_web(
     server.web_access = access  # type: ignore[attr-defined]
     url = f"http://{host}:{port}/"
     print(f"字幕知识管道：{url}")
-    print("API Key 只保留在本次进程内存，不写入运行目录。按 Ctrl+C 停止。")
+    print(
+        "新 API Key 默认只保留在内存；本机选择保存时使用 Windows DPAPI 加密，"
+        "且不写入运行目录。按 Ctrl+C 停止。"
+    )
     if public_mode:
         access_mode = "公开访问（无登录）" if not require_auth else "访问认证"
         print(

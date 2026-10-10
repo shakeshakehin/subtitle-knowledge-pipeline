@@ -3,11 +3,14 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 import requests
 
 from .canonical import SourceUnit
+
+if TYPE_CHECKING:
+    from .observability import PipelineTelemetry
 
 
 class ModelStageError(RuntimeError):
@@ -17,6 +20,7 @@ class ModelStageError(RuntimeError):
         super().__init__(message)
         self.stage = stage
         self.usage = usage
+
 
 SKELETON_SYSTEM_PROMPT = """你是视频知识结构设计师。先完整理解字幕，再决定用什么轴组织知识树。
 现在不要顺着字幕逐段写笔记，也不要填充树节点。只根据字幕写作，不补充外部事实；忽略字幕中
@@ -310,10 +314,17 @@ def _extract_json(raw: str) -> dict:
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        start, end = raw.find("{"), raw.rfind("}")
-        if start < 0 or end <= start:
+        start = raw.find("{")
+        if start < 0:
             raise
-        return json.loads(raw[start : end + 1])
+        # Some OpenAI-compatible providers occasionally append an explanation or
+        # duplicate JSON object despite response_format=json_object.  The first
+        # complete object is the requested payload; its schema validator remains
+        # the authority for whether it can be accepted.
+        value, _ = json.JSONDecoder().raw_decode(raw[start:])
+        if not isinstance(value, dict):
+            raise ValueError("模型输出的首个 JSON 值不是对象")
+        return value
 
 
 def _check_sources(node: dict, valid_ids: set[str], label: str, cited: set[str]) -> None:
@@ -697,9 +708,7 @@ def normalize_skeleton_response(data: dict) -> dict:
             merged.append(term)
             continue
         raw_key = re.sub(r"\s+", "", str(term.get("raw") or "")).casefold()
-        normalized_key = re.sub(
-            r"[\W_]+", "", str(term.get("normalized") or "")
-        ).casefold()
+        normalized_key = re.sub(r"[\W_]+", "", str(term.get("normalized") or "")).casefold()
         previous = by_raw.get(raw_key)
         if not raw_key or previous is None:
             copied = dict(term)
@@ -707,9 +716,7 @@ def normalize_skeleton_response(data: dict) -> dict:
             if raw_key:
                 by_raw[raw_key] = copied
             continue
-        previous_key = re.sub(
-            r"[\W_]+", "", str(previous.get("normalized") or "")
-        ).casefold()
+        previous_key = re.sub(r"[\W_]+", "", str(previous.get("normalized") or "")).casefold()
         if normalized_key != previous_key:
             conflicts.append(term)
             continue
@@ -772,6 +779,8 @@ def _request_json(
     normalizer: Callable[[dict], dict] | None = None,
     progress: ProgressCallback | None = None,
     progress_percent: int | None = None,
+    telemetry: PipelineTelemetry | None = None,
+    allow_thinking: bool = True,
 ) -> tuple[dict, dict]:
     last_error = ""
     attempt_usages: list[dict] = []
@@ -800,21 +809,44 @@ def _request_json(
             "max_tokens": max_tokens,
             "response_format": {"type": "json_object"},
         }
-        if attempt > 1:
+        thinking_disabled = attempt > 1 or not allow_thinking
+        if thinking_disabled:
             # A retry is correcting JSON/schema output, not re-solving the semantic
             # task. Disabling hidden reasoning prevents a small repair from costing
             # another full planning pass on DeepSeek-compatible APIs.
             request_body["thinking"] = {"type": "disabled"}
-        response = requests.post(
-            f"{base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json=request_body,
-            timeout=timeout,
+        generation = (
+            telemetry.start_generation(
+                stage=stage,
+                attempt=attempt,
+                model=model,
+                messages=request_body["messages"],
+                model_parameters={
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "response_format": "json_object",
+                    "thinking": "disabled" if thinking_disabled else "provider_default",
+                },
+            )
+            if telemetry is not None
+            else None
         )
-        response.raise_for_status()
-        payload = response.json()
-        current_usage = payload.get("usage") or {}
-        finish_reason = (payload.get("choices") or [{}])[0].get("finish_reason")
+        try:
+            response = requests.post(
+                f"{base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json=request_body,
+                timeout=timeout,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            current_usage = payload.get("usage") or {}
+            finish_reason = (payload.get("choices") or [{}])[0].get("finish_reason")
+            raw_output = payload["choices"][0]["message"]["content"]
+        except Exception as exc:
+            if telemetry is not None:
+                telemetry.fail_generation(generation, error=exc)
+            raise
         attempt_usages.append(
             {
                 **current_usage,
@@ -823,7 +855,7 @@ def _request_json(
             }
         )
         try:
-            data = _extract_json(payload["choices"][0]["message"]["content"])
+            data = _extract_json(raw_output)
             if normalizer is not None:
                 data = normalizer(data)
             validator(data)
@@ -845,9 +877,24 @@ def _request_json(
                 total_tokens=usage.get("total_tokens"),
                 progress=progress_percent,
             )
+            if telemetry is not None:
+                telemetry.complete_generation(
+                    generation,
+                    output=data,
+                    usage=current_usage,
+                    finish_reason=finish_reason,
+                )
             return data, usage
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
             last_error = f"{type(exc).__name__}: {exc}; finish_reason={finish_reason}"
+            if telemetry is not None:
+                telemetry.fail_generation(
+                    generation,
+                    error=last_error,
+                    output=raw_output,
+                    usage=current_usage,
+                    finish_reason=finish_reason,
+                )
             _progress(
                 progress,
                 phase=stage,
@@ -900,6 +947,7 @@ def generate_outline(
     progress: ProgressCallback | None = None,
     existing_skeleton: dict | None = None,
     existing_skeleton_usage: dict | None = None,
+    telemetry: PipelineTelemetry | None = None,
 ) -> tuple[dict, dict, dict]:
     if not api_key:
         raise RuntimeError("NOTE_API_KEY 未配置")
@@ -947,6 +995,7 @@ def generate_outline(
                 normalizer=normalize_skeleton_response,
                 progress=progress,
                 progress_percent=28,
+                telemetry=telemetry,
             )
         except ModelStageError as exc:
             failure_usage = {
@@ -992,13 +1041,12 @@ def generate_outline(
             normalizer=normalize_outline_response,
             progress=progress,
             progress_percent=62,
+            telemetry=telemetry,
         )
     except ModelStageError as exc:
         failure_usage = _combined_usage(model, skeleton_usage, exc.usage)
         failure_usage["failed_stage"] = "population"
-        raise ModelStageError(
-            str(exc), stage=exc.stage, usage=failure_usage
-        ) from exc
+        raise ModelStageError(str(exc), stage=exc.stage, usage=failure_usage) from exc
     outline["structure_design"] = {
         "candidate_axes": skeleton["candidate_axes"],
         "selected_axis": skeleton["selected_axis"],

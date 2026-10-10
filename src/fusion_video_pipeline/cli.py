@@ -2,10 +2,41 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 from .config import Settings
 from .pipeline import FusionPipeline
+
+
+def _utf8_relaunch_command(
+    platform: str, utf8_mode: int, executable: str, argv: list[str]
+) -> list[str] | None:
+    """Return a UTF-8 Python relaunch command for Windows when needed.
+
+    The report dependency still contains a few ``Path.read_text()`` calls without
+    an explicit encoding.  Windows otherwise resolves those calls as GBK, which
+    breaks as soon as generated Chinese HTML contains UTF-8-only byte sequences.
+    Relaunching once with Python UTF-8 mode protects the complete report process,
+    including the third-party Pi runner, regardless of how this CLI was started.
+    """
+    if platform != "nt" or utf8_mode:
+        return None
+    return [executable, "-X", "utf8", "-m", "fusion_video_pipeline.cli", *argv]
+
+
+def _relaunch_in_utf8_mode_if_needed() -> int | None:
+    command = _utf8_relaunch_command(
+        os.name, sys.flags.utf8_mode, sys.executable, sys.argv[1:]
+    )
+    if command is None:
+        return None
+    env = os.environ.copy()
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
+    return subprocess.run(command, env=env, check=False).returncode
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -20,6 +51,12 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--uploader", help="UP 主/作者")
     run.add_argument("--source-url", help="本地字幕对应的原视频 URL")
     run.add_argument("--report-mode", choices=("standard", "brief"), default="standard")
+    run.add_argument(
+        "--report-engine",
+        choices=("legacy", "efficient", "editorial"),
+        default="legacy",
+        help="详细报告引擎：保留的 Agent 精读、高效结构化总结或编辑型总结",
+    )
     run.add_argument(
         "--output",
         choices=("tree", "report", "both"),
@@ -49,6 +86,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    relaunched = _relaunch_in_utf8_mode_if_needed()
+    if relaunched is not None:
+        return relaunched
     args = build_parser().parse_args()
     project_root = Path(__file__).resolve().parents[2]
     settings = Settings.load(project_root)
@@ -59,6 +99,7 @@ def main() -> int:
             uploader=args.uploader,
             source_url=args.source_url,
             report_mode=args.report_mode,
+            report_engine=args.report_engine,
             force=args.force,
             publish=not args.no_publish,
             outputs={"tree", "report"} if args.output == "both" else {args.output},

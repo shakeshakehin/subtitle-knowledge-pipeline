@@ -121,6 +121,93 @@ def test_report_only_does_not_generate_tree(tmp_path, monkeypatch):
     assert usage["report"]["tokens"] == 34
 
 
+def test_efficient_report_is_additive_and_does_not_call_legacy_engine(tmp_path, monkeypatch):
+    source, units, metadata = source_fixture(tmp_path)
+    pipeline = FusionPipeline(settings(tmp_path))
+    monkeypatch.setattr(pipeline, "_load_source", lambda *args, **kwargs: (units, metadata))
+    monkeypatch.setattr(
+        "fusion_video_pipeline.pipeline.generate_report",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("legacy report engine should not run")
+        ),
+    )
+
+    def fake_efficient(run_dir, received_units, received_metadata, **kwargs):
+        assert received_units == units
+        assert received_metadata["report_engine"] == "efficient"
+        html = run_dir / "report.html"
+        png = run_dir / "report.png"
+        html.write_text("<html><body>高效报告</body></html>", encoding="utf-8")
+        png.write_bytes(b"png")
+        return {
+            "engine": "efficient",
+            "html": str(html),
+            "png": str(png),
+            "inspection": {"findings": [], "source_id_count": 1},
+            "usage": {"strategy": "structured-report-v2", "llm_calls": 2, "tokens": 50},
+            "agent_summary": {"engine": "efficient", "llm_calls": 2},
+            "artifacts": ["report.html", "report.png"],
+        }
+
+    monkeypatch.setattr(
+        "fusion_video_pipeline.pipeline.generate_efficient_report", fake_efficient
+    )
+    result = pipeline.run(
+        str(source), outputs={"report"}, report_engine="efficient", publish=False
+    )
+
+    assert result["report_engine"] == "efficient"
+    assert result["report_html"].endswith("report.html")
+    usage = json.loads((__import__("pathlib").Path(result["run_dir"]) / "usage.json").read_text())
+    assert usage["report"]["strategy"] == "structured-report-v2"
+    assert usage["report"]["engine"] == "efficient"
+
+
+def test_editorial_report_is_additive_and_exposes_review_artifact(tmp_path, monkeypatch):
+    source, units, metadata = source_fixture(tmp_path)
+    pipeline = FusionPipeline(settings(tmp_path))
+    monkeypatch.setattr(pipeline, "_load_source", lambda *args, **kwargs: (units, metadata))
+    monkeypatch.setattr(
+        "fusion_video_pipeline.pipeline.generate_report",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("legacy report engine should not run")
+        ),
+    )
+
+    def fake_editorial(run_dir, received_units, received_metadata, **kwargs):
+        assert received_units == units
+        assert received_metadata["report_engine"] == "editorial"
+        html = run_dir / "report.html"
+        png = run_dir / "report.png"
+        review = run_dir / "report-editorial-review.json"
+        html.write_text("<html><body>编辑型报告</body></html>", encoding="utf-8")
+        png.write_bytes(b"png")
+        review.write_text("{}", encoding="utf-8")
+        return {
+            "engine": "editorial",
+            "html": str(html),
+            "png": str(png),
+            "review": str(review),
+            "inspection": {"findings": [], "source_id_count": 1},
+            "usage": {"strategy": "editorial-report-v1", "llm_calls": 3, "tokens": 75},
+            "agent_summary": {"engine": "editorial", "llm_calls": 3},
+            "artifacts": ["report.html", "report.png", review.name],
+        }
+
+    monkeypatch.setattr(
+        "fusion_video_pipeline.pipeline.generate_editorial_report", fake_editorial
+    )
+    result = pipeline.run(
+        str(source), outputs={"report"}, report_engine="editorial", publish=False
+    )
+
+    assert result["report_engine"] == "editorial"
+    assert result["report_review"].endswith("report-editorial-review.json")
+    usage = json.loads((__import__("pathlib").Path(result["run_dir"]) / "usage.json").read_text())
+    assert usage["report"]["strategy"] == "editorial-report-v1"
+    assert usage["report"]["engine"] == "editorial"
+
+
 def test_reused_tree_reports_zero_current_tokens(tmp_path, monkeypatch):
     source, units, metadata = source_fixture(tmp_path)
     pipeline = FusionPipeline(settings(tmp_path))

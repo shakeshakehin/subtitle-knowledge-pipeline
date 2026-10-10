@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import html
 import re
 import subprocess
@@ -286,6 +287,44 @@ def render_svg(data: dict, output: Path) -> Path:
     svg.append("</svg>")
     output.write_text("\n".join(svg), encoding="utf-8")
     return output
+
+
+def _overview_data(data: dict) -> dict:
+    """Keep the semantic overview while leaving full details to the interactive tree."""
+    overview = copy.deepcopy(data)
+    overview["summary"] = []
+    for section in overview.get("outline") or []:
+        points = section.get("points") or []
+        children: dict[str, list[dict]] = {}
+        roots: list[dict] = []
+        for point in points:
+            parent_id = point.get("parent_id")
+            if parent_id:
+                children.setdefault(str(parent_id), []).append(point)
+            else:
+                roots.append(point)
+
+        def descendant_count(point_id: str) -> int:
+            direct = children.get(point_id, [])
+            return sum(1 + descendant_count(str(child.get("id") or "")) for child in direct)
+
+        compact_points: list[dict] = []
+        for point in roots:
+            compact = dict(point)
+            hidden = descendant_count(str(point.get("id") or ""))
+            title = str(point.get("title") or point.get("text") or "")
+            compact["title"] = f"{title}  +{hidden}" if hidden else title
+            compact["detail"] = ""
+            compact["parent_id"] = None
+            compact["level"] = 1
+            compact_points.append(compact)
+        section["points"] = compact_points
+    return overview
+
+
+def render_overview_svg(data: dict, output: Path) -> Path:
+    """Render a scan-first static map with deeper nodes represented by count badges."""
+    return render_svg(_overview_data(data), output)
 
 
 def inspect_svg_layout(svg_path: Path) -> dict:

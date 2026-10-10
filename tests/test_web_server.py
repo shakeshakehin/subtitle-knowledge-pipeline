@@ -2,6 +2,8 @@ import base64
 import json
 from pathlib import Path
 
+import pytest
+
 from fusion_video_pipeline.config import Settings
 from fusion_video_pipeline.web_server import (
     JobManager,
@@ -35,7 +37,13 @@ def test_history_is_rebuilt_from_persisted_run_directories(tmp_path):
     run.mkdir(parents=True)
     write_json(
         run / "source.info.json",
-        {"title": "历史总结", "outputs": ["tree", "report"], "source_type": "local_transcript"},
+        {
+            "title": "历史总结",
+            "outputs": ["tree", "report"],
+            "report_engine": "efficient",
+            "source_type": "local_transcript",
+            "transcript_cache": {"status": "hit", "key": "local-test"},
+        },
     )
     write_json(
         run / "status.json",
@@ -54,6 +62,9 @@ def test_history_is_rebuilt_from_persisted_run_directories(tmp_path):
     )
     (run / "tree.html").write_text("<html></html>", encoding="utf-8")
     (run / "report.html").write_text("<html></html>", encoding="utf-8")
+    (run / "subtitle.txt").write_text("字幕", encoding="utf-8")
+    (run / "transcript.md").write_text("带定位字幕", encoding="utf-8")
+    (run / "canonical-transcript.jsonl").write_text("{}\n", encoding="utf-8")
 
     manager = JobManager(settings(tmp_path))
     try:
@@ -67,6 +78,13 @@ def test_history_is_rebuilt_from_persisted_run_directories(tmp_path):
         assert row["elapsed_seconds"] == 32
         assert row["thesis"] == "历史主旨"
         assert row["summary"] == ["结论一"]
+        assert row["report_engine"] == "efficient"
+        assert row["transcript_cache"] == {"status": "hit", "key": "local-test"}
+        assert row["artifacts"]["subtitle"].endswith("/subtitle.txt")
+        assert row["artifacts"]["transcript"].endswith("/transcript.md")
+        assert row["artifacts"]["canonical_transcript"].endswith(
+            "/canonical-transcript.jsonl"
+        )
         assert row["primary_url"].endswith("/tree.html")
         assert manager.history_artifact(run.name, "tree.html") == run / "tree.html"
         assert manager.history_artifact(run.name, "../source.info.json") is None
@@ -110,10 +128,41 @@ def test_web_ui_contains_live_progress_and_persisted_history_controls():
     assert 'class="progress-track"' in html
     assert "/api/history?limit=60" in html
     assert 'sandbox="allow-scripts allow-downloads"' in html
-    assert "公开访问模式 · 自带 Key" in html
+    assert "公开访问模式 · 必须自带 Key" in html
     assert "双击记录查看完整知识树与详细报告" in html
     assert "data-history-open=" in html
     assert "card.addEventListener('dblclick'" in html
+    assert "字幕缓存命中" in html
+    assert "字幕 TXT" in html
+    assert 'id="api-key-mode"' in html
+    assert 'id="shared-api-key"' in html
+    assert 'id="new-api-key-field"' in html
+    assert "note_api_key:sharedApiKey" in html
+    assert "report_api_key:sharedApiKey" in html
+    assert 'id="note-api-key"' not in html
+    assert 'id="report-api-key"' not in html
+    assert 'name="report-engine"' in html
+    assert 'value="editorial" checked' in html
+    assert "编辑型总结（推荐）" in html
+    assert "report_review:'终稿复核 JSON'" in html
+    assert "report_engine:reportEngine" in html
+    assert "现有 Agent 精读（保留）" in html
+
+
+def test_job_rejects_unknown_report_engine(tmp_path):
+    manager = JobManager(settings(tmp_path))
+    try:
+        with pytest.raises(ValueError, match="报告引擎无效"):
+            manager.submit(
+                {
+                    "source_type": "subtitle",
+                    "subtitle_text": "测试字幕",
+                    "outputs": {"report": True},
+                    "report_engine": "unknown",
+                }
+            )
+    finally:
+        manager.executor.shutdown(wait=False, cancel_futures=True)
 
 
 def test_public_mode_can_disable_login_without_disabling_server_locks(tmp_path):
@@ -190,6 +239,50 @@ def test_official_deepseek_request_key_is_shared_between_outputs(tmp_path):
         )
         assert from_report_field.note_api_key == "another-fresh-key"
         assert from_report_field.report_api_key == "another-fresh-key"
+    finally:
+        manager.executor.shutdown(wait=False, cancel_futures=True)
+
+
+def test_new_official_deepseek_key_can_replace_configured_key_and_be_saved(tmp_path):
+    configured = Settings(
+        project_root=tmp_path,
+        note_base_url="https://api.deepseek.com",
+        note_model="deepseek-flash",
+        note_api_key="stale-tree-key",
+        report_provider="deepseek",
+        report_model="deepseek-flash",
+        report_api_key="stale-report-key",
+        obsidian_root=tmp_path / "vault",
+        credential_path=tmp_path / "credential.json",
+    )
+    manager = JobManager(configured)
+    try:
+        requested, credential_to_save = manager._request_settings(
+            {
+                "models": {
+                    "api_key_mode": "new",
+                    "note_api_key": "fresh-shared-key",
+                    "report_api_key": "fresh-shared-key",
+                    "save_api_key": True,
+                }
+            },
+            allow_saved_api_key=True,
+        )
+        assert requested.note_api_key == "fresh-shared-key"
+        assert requested.report_api_key == "fresh-shared-key"
+        assert credential_to_save == "fresh-shared-key"
+    finally:
+        manager.executor.shutdown(wait=False, cancel_futures=True)
+
+
+def test_saved_api_key_is_not_available_to_public_unauthenticated_request(tmp_path):
+    manager = JobManager(settings(tmp_path), public_mode=True)
+    try:
+        with pytest.raises(ValueError, match="不允许使用本机保存"):
+            manager.request_settings(
+                {"models": {"api_key_mode": "saved"}},
+                allow_saved_api_key=False,
+            )
     finally:
         manager.executor.shutdown(wait=False, cancel_futures=True)
 

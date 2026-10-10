@@ -18,6 +18,11 @@ class Settings:
     report_api_key: str
     obsidian_root: Path
     credential_path: Path
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_base_url: str = "http://localhost:3000"
+    langfuse_environment: str = "development"
+    langfuse_capture_content: bool = False
 
     @classmethod
     def load(cls, project_root: Path) -> "Settings":
@@ -36,4 +41,10 @@ class Settings:
             credential_path=Path(
                 os.getenv("BILIBILI_CREDENTIAL", str(Path.home() / ".bilibili-cli" / "credential.json"))
             ).expanduser(),
+            langfuse_public_key=os.getenv("LANGFUSE_PUBLIC_KEY", ""),
+            langfuse_secret_key=os.getenv("LANGFUSE_SECRET_KEY", ""),
+            langfuse_base_url=os.getenv("LANGFUSE_BASE_URL", "http://localhost:3000").rstrip("/"),
+            langfuse_environment=os.getenv("LANGFUSE_TRACING_ENVIRONMENT", "development"),
+            langfuse_capture_content=os.getenv("LANGFUSE_CAPTURE_CONTENT", "false").lower()
+            in {"1", "true", "yes", "on", "full"},
         )

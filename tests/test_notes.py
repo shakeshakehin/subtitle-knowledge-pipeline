@@ -3,6 +3,7 @@ import json
 import pytest
 
 from fusion_video_pipeline.notes import (
+    _extract_json,
     _request_json,
     normalize_outline_response,
     normalize_skeleton_response,
@@ -316,6 +317,44 @@ def test_request_usage_sums_all_validation_attempts(monkeypatch):
     assert len(usage["attempt_usages"]) == 2
     assert "thinking" not in requests[0]
     assert requests[1]["thinking"] == {"type": "disabled"}
+
+
+def test_extract_json_accepts_first_complete_object_when_provider_appends_text():
+    assert _extract_json('{"ok":true}{"duplicate":true}') == {"ok": True}
+    assert _extract_json('结果如下：\n{"ok":true}\n完成') == {"ok": True}
+
+
+def test_request_can_disable_hidden_thinking_on_first_attempt(monkeypatch):
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "choices": [{"finish_reason": "stop", "message": {"content": '{"ok":true}'}}],
+                "usage": {},
+            }
+
+    captured = {}
+
+    def fake_post(*args, **kwargs):
+        captured.update(kwargs["json"])
+        return Response()
+
+    monkeypatch.setattr("fusion_video_pipeline.notes.requests.post", fake_post)
+    _request_json(
+        base_url="https://example.invalid",
+        model="model",
+        api_key="key",
+        system_prompt="system",
+        user_prompt="user",
+        validator=lambda data: None,
+        stage="review",
+        max_tokens=100,
+        timeout=5,
+        allow_thinking=False,
+    )
+    assert captured["thinking"] == {"type": "disabled"}
 
 
 def test_exact_duplicate_term_normalizations_are_merged_without_an_llm_retry():
