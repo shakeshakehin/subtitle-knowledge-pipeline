@@ -41,10 +41,6 @@ def _compact_node_html(
 ) -> str:
     source_ids = _references(point)
     title = str(point.get("title") or point.get("text") or "未命名节点")
-    detail = str(point.get("detail") or "")
-    kind = str(point.get("kind") or "point")
-    relation = str(point.get("relation_to_parent") or "")
-    time_label = _time_label(source_ids, unit_index)
     child_markup = "".join(
         _compact_node_html(
             child,
@@ -71,10 +67,7 @@ def _compact_node_html(
         '<div class="node-row">'
         f'<button class="node-main" type="button" data-node-select '
         f'{_range_attributes(source_ids, unit_index)} '
-        f'data-title="{_attribute(title)}" data-detail="{_attribute(detail)}" '
-        f'data-kind="{_attribute(kind)}" data-relation="{_attribute(relation)}" '
-        f'data-time="{_attribute(time_label)}" '
-        f'data-child-count="{descendants}" data-can-locate="{str(linked and bool(source_ids)).lower()}">'
+        f'data-can-locate="{str(linked and bool(source_ids)).lower()}">'
         '<span class="node-dot" aria-hidden="true"></span>'
         f'<span class="node-title">{html.escape(title)}</span>'
         "</button>"
@@ -116,17 +109,12 @@ def render_compact_tree_html(
             for point, children in points
         )
         point_count = len(branch.get("points") or [])
-        time_label = _time_label(source_ids, unit_index)
         branch_markup.append(
             f'<section class="branch" data-branch="branch-{index + 1}" '
             f'style="--branch:{color};--branch-soft:{soft}">'
             '<div class="branch-head">'
             f'<button class="branch-main" type="button" data-node-select '
             f'{_range_attributes(source_ids, unit_index)} '
-            f'data-title="{_attribute(branch.get("heading") or "未命名分支")}" '
-            f'data-detail="{_attribute(branch.get("purpose") or "")}" '
-            'data-kind="branch" data-relation="main_branch" '
-            f'data-time="{_attribute(time_label)}" data-child-count="{point_count}" '
             f'data-can-locate="{str(linked and bool(source_ids)).lower()}">'
             f'<span class="branch-index">{index + 1:02d}</span>'
             f'<span><strong>{html.escape(str(branch.get("heading") or "未命名分支"))}</strong>'
@@ -167,7 +155,7 @@ def render_compact_tree_html(
         'aria-valuemin="22" aria-valuemax="78" aria-valuenow="44" '
         'title="拖动调整两侧宽度；双击恢复默认比例"><span aria-hidden="true"></span></div>'
         '<main class="report-pane"><div class="report-toolbar"><strong>详细报告</strong>'
-        '<span id="match-status">选择左侧节点可查看详情并定位报告</span>'
+        '<span id="match-status">选择左侧节点可定位到报告内容</span>'
         '<button id="clear-match" type="button">清除定位</button></div>'
         f'<iframe id="report-frame" title="详细报告" src="{_attribute(report_filename)}"></iframe></main>'
         if linked
@@ -177,7 +165,6 @@ def render_compact_tree_html(
     root_note = f"组织轴 · {axis_name}" if axis_name else "知识结构概览"
     title = html.escape(str(outline.get("title") or metadata.get("title") or "知识树"))
     thesis = html.escape(str(outline.get("thesis") or ""))
-    root_type = html.escape(str(outline.get("type") or "知识结构"))
     data_json = json.dumps(unit_times, ensure_ascii=False).replace("</", "<\\/")
 
     document = r"""<!doctype html>
@@ -189,11 +176,10 @@ def render_compact_tree_html(
 <style>
 :root{--ink:#17262f;--muted:#718089;--line:#d8dfdf;--paper:#f4f5f2;--navy:#17384b;--accent:#e86d50;--tree-width:44%}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;color:var(--ink);background:var(--paper)}button{font:inherit}.app{display:grid;grid-template-columns:var(--tree-width) 10px minmax(0,1fr);height:100vh;overflow:hidden}.app:not(.linked){grid-template-columns:minmax(0,1fr)}
-.tree-pane{min-width:0;height:100vh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;background:#f8f8f5}.tree-header{padding:22px 25px 15px;border-bottom:1px solid #e1e5e2;background:#fbfbf9}.eyebrow{font-size:10px;font-weight:900;letter-spacing:.18em;color:#517284}.title-row{display:flex;align-items:flex-start;gap:14px;margin-top:8px}.title-copy{min-width:0;flex:1}.title-copy h1{font-size:clamp(22px,2.1vw,31px);line-height:1.25;letter-spacing:-.025em;margin:0}.title-copy p{font-size:13px;line-height:1.65;color:#52626b;margin:8px 0 0}.root-mark{flex:none;margin-top:3px;padding:6px 9px;border-radius:7px;background:var(--navy);color:#fff;font-size:10px;font-weight:800}.axis{margin-top:11px;color:#69808b;font-size:11px}.tree-tools{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:15px}.tool-group{display:flex;padding:3px;border-radius:9px;background:#edf0ed}.tree-tools button{border:0;border-radius:7px;padding:7px 9px;background:transparent;color:#52626b;font-size:11px;font-weight:750;cursor:pointer}.tree-tools button:hover{color:var(--navy)}.tree-tools button.active{background:#fff;color:var(--navy);box-shadow:0 2px 9px #1e364512}.exit-focus{margin-left:auto!important;border:1px solid #cad4d5!important;background:#fff!important;color:#2d6076!important}.exit-focus[hidden]{display:none}
+.tree-pane{min-width:0;height:100vh;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#f8f8f5}.tree-header{padding:22px 25px 15px;border-bottom:1px solid #e1e5e2;background:#fbfbf9}.eyebrow{font-size:10px;font-weight:900;letter-spacing:.18em;color:#517284}.title-row{display:flex;align-items:flex-start;gap:14px;margin-top:8px}.title-copy{min-width:0;flex:1}.title-copy h1{font-size:clamp(22px,2.1vw,31px);line-height:1.25;letter-spacing:-.025em;margin:0}.title-copy p{font-size:13px;line-height:1.65;color:#52626b;margin:8px 0 0}.axis{margin-top:11px;color:#69808b;font-size:11px}.tree-tools{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:15px}.tool-group{display:flex;padding:3px;border-radius:9px;background:#edf0ed}.tree-tools button{border:0;border-radius:7px;padding:7px 9px;background:transparent;color:#52626b;font-size:11px;font-weight:750;cursor:pointer}.tree-tools button:hover{color:var(--navy)}.tree-tools button.active{background:#fff;color:var(--navy);box-shadow:0 2px 9px #1e364512}.exit-focus{margin-left:auto!important;border:1px solid #cad4d5!important;background:#fff!important;color:#2d6076!important}.exit-focus[hidden]{display:none}
 .tree-scroll{overflow:auto;padding:18px 22px 55px;scrollbar-gutter:stable}.branch{--branch:#347397;--branch-soft:#e8f1f6;margin-bottom:13px}.branch[hidden]{display:none}.branch-head{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:stretch}.branch-main{min-width:0;display:flex;align-items:center;gap:11px;border:0;border-left:4px solid var(--branch);border-radius:9px;padding:10px 12px;background:#fff;color:var(--ink);text-align:left;cursor:pointer;box-shadow:0 2px 9px #2237430b}.branch-main:hover,.branch-main.active{background:var(--branch-soft)}.branch-index{color:var(--branch);font-size:11px;font-weight:900;letter-spacing:.04em}.branch-main>span:last-child{min-width:0}.branch-main strong{display:block;font-size:14px;line-height:1.45}.branch-main small{display:block;margin-top:2px;color:var(--muted);font-size:10px}.branch-focus,.branch-fold{border:1px solid #d7dddd;border-radius:8px;background:#fff;color:#6b7b82;font-size:10px;font-weight:800;cursor:pointer}.branch-focus{padding:0 9px}.branch-fold{width:33px;font-size:17px}.branch-focus:hover,.branch-fold:hover{border-color:var(--branch);color:var(--branch)}.branch.is-collapsed .branch-body{display:none}.branch.is-collapsed .branch-fold{font-size:0}.branch.is-collapsed .branch-fold:after{content:'＋';font-size:16px}
 .branch-body{padding:8px 0 1px 13px}.tree-item{position:relative;margin-left:9px;padding-left:16px;border-left:1px solid color-mix(in srgb,var(--branch) 30%,#d9dfdf)}.tree-item:before{content:"";position:absolute;left:-1px;top:18px;width:13px;border-top:1px solid color-mix(in srgb,var(--branch) 38%,#d9dfdf)}.node-row{display:flex;align-items:center;gap:5px;min-height:35px}.node-main{min-width:0;flex:1;display:flex;align-items:center;gap:9px;border:0;border-radius:8px;padding:7px 8px;background:transparent;color:var(--ink);text-align:left;cursor:pointer}.node-main:hover,.node-main.active{background:var(--branch-soft)}.node-dot{flex:none;width:7px;height:7px;border:2px solid var(--branch);border-radius:50%;background:#fff}.node-title{font-size:12px;line-height:1.5}.tree-item[data-level="1"]>.node-row .node-title{font-size:13px;font-weight:750}.tree-item[data-level="1"]>.node-row .node-dot{width:8px;height:8px;background:var(--branch)}.tree-item[data-level="3"] .node-title,.tree-item[data-level="4"] .node-title{color:#53636b}.node-fold{flex:none;display:flex;align-items:center;gap:2px;border:0;border-radius:7px;padding:4px 6px;background:transparent;color:var(--branch);font-size:12px;cursor:pointer}.node-fold:hover{background:var(--branch-soft)}.node-fold em{font-size:9px;font-style:normal}.children{margin-left:6px}.tree-item.is-collapsed>.children{display:none}.tree-item.is-collapsed>.node-row .node-fold span{font-size:0}.tree-item.is-collapsed>.node-row .node-fold span:after{content:'＋';font-size:12px}
 .summary{margin:17px 0 0 4px;border-top:1px solid #dfe3df;padding-top:12px}.summary summary{display:flex;align-items:center;gap:8px;color:#4c5e67;font-size:12px;font-weight:800;cursor:pointer}.summary summary span{display:inline-grid;place-items:center;min-width:19px;height:19px;border-radius:99px;background:#ecefeb;color:#66767d;font-size:9px}.summary ol{margin:12px 0 0;padding:0 0 0 23px}.summary li{padding:4px 0 7px;line-height:1.55;font-size:12px}.summary li small{display:block;color:var(--muted);font-size:9px}
-.detail-panel{border-top:1px solid #dce2df;background:#fff;padding:14px 20px 16px;box-shadow:0 -12px 30px #263f4b0d}.detail-panel[hidden]{display:none}.detail-top{display:flex;align-items:flex-start;gap:12px}.detail-copy{min-width:0;flex:1}.detail-kicker{display:flex;align-items:center;gap:7px;color:#547080;font-size:9px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.detail-title{margin:4px 0 0;font-size:16px;line-height:1.4}.detail-close{border:0;background:transparent;color:#7f8b90;font-size:20px;cursor:pointer}.detail-body{margin:8px 0 0;color:#4e5d65;font-size:12px;line-height:1.65}.detail-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.detail-meta span{padding:4px 7px;border-radius:99px;background:#f0f2ef;color:#68767d;font-size:9px}.detail-locate{margin-top:10px;border:0;border-radius:8px;padding:7px 10px;background:#e8f1f6;color:#26617c;font-size:10px;font-weight:850;cursor:pointer}.detail-locate[hidden]{display:none}
 .splitter{position:relative;z-index:5;display:grid;place-items:center;cursor:col-resize;touch-action:none;background:#d7ddde;border-left:1px solid #c8d0d2;border-right:1px solid #c8d0d2;outline:none}.splitter span{width:3px;height:48px;border-radius:99px;background:#91a1a8;box-shadow:0 0 0 4px #ffffff80}.splitter:hover,.splitter:focus-visible,.splitter.dragging{background:#c3dce5}.splitter:hover span,.splitter:focus-visible span,.splitter.dragging span{background:#2f6f89}body.resizing{cursor:col-resize;user-select:none}.report-pane{min-width:0;background:#d9dddf;display:grid;grid-template-rows:auto 1fr}.report-toolbar{display:flex;align-items:center;gap:14px;min-height:52px;padding:9px 15px;background:#fff;border-bottom:1px solid #ccd4d8}.report-toolbar span{flex:1;color:var(--muted);font-size:11px}.report-toolbar button{border:1px solid #bdc8ce;background:#fff;border-radius:8px;padding:7px 10px;cursor:pointer}iframe{width:100%;height:100%;border:0;background:white}
 @media(max-width:900px){.app{display:block;height:auto;overflow:visible}.tree-pane{height:100vh}.splitter{display:none}.report-pane{height:82vh}.title-copy h1{font-size:23px}.tree-header{padding:18px 17px 13px}.tree-scroll{padding:14px 14px 45px}.branch-focus{display:none}}
 </style>
@@ -203,7 +189,7 @@ def render_compact_tree_html(
 <aside class="tree-pane">
   <header class="tree-header">
     <div class="eyebrow">FUSION KNOWLEDGE TREE · OVERVIEW FIRST</div>
-    <div class="title-row"><div class="title-copy"><h1>__TITLE__</h1><p>__THESIS__</p></div><span class="root-mark">__ROOT_TYPE__</span></div>
+    <div class="title-row"><div class="title-copy"><h1>__TITLE__</h1><p>__THESIS__</p></div></div>
     <div class="axis">__ROOT_NOTE__</div>
     <nav class="tree-tools" aria-label="知识树展开方式">
       <div class="tool-group"><button class="active" type="button" data-tree-view="overview">概览</button><button type="button" data-tree-view="next">展开一层</button><button type="button" data-tree-view="all">全部展开</button></div>
@@ -211,17 +197,12 @@ def render_compact_tree_html(
     </nav>
   </header>
   <main class="tree-scroll">__BRANCHES____SUMMARY__</main>
-  <section id="detail-panel" class="detail-panel" hidden aria-live="polite">
-    <div class="detail-top"><div class="detail-copy"><div id="detail-kicker" class="detail-kicker"></div><h2 id="detail-title" class="detail-title"></h2></div><button id="detail-close" class="detail-close" type="button" aria-label="关闭节点详情">×</button></div>
-    <p id="detail-body" class="detail-body"></p><div id="detail-meta" class="detail-meta"></div><button id="detail-locate" class="detail-locate" type="button" hidden>定位到详细报告</button>
-  </section>
 </aside>
 __REPORT_PANEL__
 </div>
 <script>
 const UNIT_TIMES=__UNIT_TIMES__;
 const app=document.querySelector('.app'),splitter=document.getElementById('splitter'),frame=document.getElementById('report-frame'),status=document.getElementById('match-status');
-const detailPanel=document.getElementById('detail-panel'),detailTitle=document.getElementById('detail-title'),detailBody=document.getElementById('detail-body'),detailKicker=document.getElementById('detail-kicker'),detailMeta=document.getElementById('detail-meta'),detailLocate=document.getElementById('detail-locate');
 const clampSplit=value=>Math.max(22,Math.min(78,value));
 function setSplit(value){if(!app||!splitter)return;const percent=clampSplit(Number(value)||44);app.style.setProperty('--tree-width',`${percent}%`);splitter.setAttribute('aria-valuenow',String(Math.round(percent)));}
 function splitFromPointer(clientX){if(!app||matchMedia('(max-width:900px)').matches)return;const bounds=app.getBoundingClientRect();setSplit((clientX-bounds.left)/bounds.width*100);}
@@ -237,21 +218,7 @@ const overlap=(a1,a2,b1,b2)=>[a1,a2,b1,b2].every(Number.isFinite)?Math.max(0,Mat
 const stamp=ms=>{const n=Math.floor(ms/1000),s=String(n%60).padStart(2,'0'),m=Math.floor(n/60)%60,h=Math.floor(n/3600);return h?`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${s}`:`${String(m).padStart(2,'0')}:${s}`;};
 function clearMatches(){if(!frame?.contentDocument)return;frame.contentDocument.querySelectorAll('.fusion-report-match').forEach(el=>{el.classList.remove('fusion-report-match');el.style.outline='';el.style.backgroundColor='';});}
 function locate(trigger){if(!frame)return;const wanted=splitIds(trigger.dataset.sourceUnits);frame.contentWindow?.postMessage({type:'fusion-locate',ids:wanted},'*');if(!frame.contentDocument){status.textContent='正在详细报告中定位…';return;}clearMatches();const wantedSet=new Set(wanted),wantedRange=rangeFor(wanted);const candidates=[...frame.contentDocument.querySelectorAll('[data-source-units]')].map(el=>{const ids=splitIds(el.getAttribute('data-source-units')),exact=ids.filter(id=>wantedSet.has(id)).length,r=rangeFor(ids),time=overlap(wantedRange.start,wantedRange.end,r.start,r.end),lines=overlap(wantedRange.lineStart,wantedRange.lineEnd,r.lineStart,r.lineEnd),tagBonus=/^(P|LI|TR|FIGURE|BLOCKQUOTE)$/.test(el.tagName)?250:0;return{el,ids,exact,time,lines,score:exact*100000+time+lines*1000+tagBonus-Math.min(ids.length,200)};}).filter(x=>x.exact||x.time||x.lines).sort((a,b)=>b.score-a.score);if(!candidates.length){status.textContent='详细报告中没有找到对应来源绑定';return;}const best=candidates[0];candidates.filter(x=>x.exact&&x.exact===best.exact).slice(0,8).forEach(x=>{x.el.classList.add('fusion-report-match');x.el.style.outline='3px solid #e86d50';x.el.style.backgroundColor='#fff3cf';});best.el.scrollIntoView({behavior:'smooth',block:'center'});const label=Number.isFinite(wantedRange.start)?`${stamp(wantedRange.start)}–${stamp(wantedRange.end)}`:Number.isFinite(wantedRange.lineStart)?`字幕行 ${wantedRange.lineStart}–${wantedRange.lineEnd}`:`${wanted.length} 个来源单元`;status.textContent=`已定位：${label} · 命中 ${best.exact||1} 个来源单元`;}
-let selectedNode=null;
-function showDetail(trigger){
-  document.querySelectorAll('[data-node-select].active').forEach(el=>el.classList.remove('active'));
-  trigger.classList.add('active');selectedNode=trigger;
-  detailTitle.textContent=trigger.dataset.title||'未命名节点';
-  detailBody.textContent=trigger.dataset.detail||'这个节点目前只有概览标题；增强生成阶段会在这里补充解释、条件与限定。';
-  const kind=trigger.dataset.kind||'node',relation=trigger.dataset.relation||'';
-  detailKicker.textContent=relation&&relation!==kind?`${kind} · ${relation}`:kind;
-  detailMeta.innerHTML='';
-  const rows=[trigger.dataset.time,Number(trigger.dataset.childCount)>0?`${trigger.dataset.childCount} 个下级节点`:null].filter(Boolean);
-  rows.forEach(value=>{const tag=document.createElement('span');tag.textContent=value;detailMeta.append(tag);});
-  detailLocate.hidden=trigger.dataset.canLocate!=='true';detailPanel.hidden=false;
-}
-document.querySelectorAll('[data-node-select]').forEach(el=>el.addEventListener('click',()=>{showDetail(el);if(el.dataset.canLocate==='true')locate(el);}));
-detailLocate?.addEventListener('click',()=>{if(selectedNode)locate(selectedNode);});document.getElementById('detail-close')?.addEventListener('click',()=>{detailPanel.hidden=true;document.querySelectorAll('[data-node-select].active').forEach(el=>el.classList.remove('active'));});
+document.querySelectorAll('[data-node-select]').forEach(el=>el.addEventListener('click',()=>{if(el.dataset.canLocate==='true')locate(el);}));
 function setNodeCollapsed(item,collapsed){item.classList.toggle('is-collapsed',collapsed);const button=item.querySelector(':scope>.node-row>[data-node-fold]');button?.setAttribute('aria-expanded',String(!collapsed));button?.setAttribute('title',collapsed?'展开下级节点':'折叠下级节点');}
 document.querySelectorAll('[data-node-fold]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();const item=button.closest('.tree-item');setNodeCollapsed(item,!item.classList.contains('is-collapsed'));}));
 function setView(mode){document.querySelectorAll('[data-tree-view]').forEach(button=>button.classList.toggle('active',button.dataset.treeView===mode));document.querySelectorAll('.tree-item:has(>.children)').forEach(item=>{const level=Number(item.dataset.level)||1;setNodeCollapsed(item,mode==='overview'||(mode==='next'&&level>=2));});}
@@ -259,14 +226,13 @@ document.querySelectorAll('[data-tree-view]').forEach(button=>button.addEventLis
 document.querySelectorAll('[data-branch-fold]').forEach(button=>button.addEventListener('click',()=>{const branch=button.closest('.branch'),collapsed=branch.classList.toggle('is-collapsed');button.setAttribute('aria-expanded',String(!collapsed));button.title=collapsed?'展开分支':'折叠分支';}));
 const exitFocus=document.getElementById('exit-focus');function focusBranch(target){document.querySelectorAll('.branch').forEach(branch=>branch.hidden=Boolean(target)&&branch!==target);exitFocus.hidden=!target;if(target)target.scrollIntoView({behavior:'smooth',block:'start'});}document.querySelectorAll('[data-branch-focus]').forEach(button=>button.addEventListener('click',()=>focusBranch(button.closest('.branch'))));exitFocus?.addEventListener('click',()=>focusBranch(null));
 addEventListener('message',event=>{if(event.data?.type!=='fusion-located')return;status.textContent=event.data.found?`已定位：${event.data.label} · 命中 ${event.data.matchCount} 个来源单元`:'详细报告中没有找到对应来源绑定';});
-document.getElementById('clear-match')?.addEventListener('click',()=>{clearMatches();frame?.contentWindow?.postMessage({type:'fusion-clear'},'*');status.textContent='选择左侧节点可查看详情并定位报告';});
+document.getElementById('clear-match')?.addEventListener('click',()=>{clearMatches();frame?.contentWindow?.postMessage({type:'fusion-clear'},'*');status.textContent='选择左侧节点可定位到报告内容';});
 </script>
 </body>
 </html>"""
     replacements = {
         "__TITLE__": title,
         "__THESIS__": thesis,
-        "__ROOT_TYPE__": root_type,
         "__ROOT_NOTE__": html.escape(root_note),
         "__LINKED_CLASS__": linked_class,
         "__BRANCHES__": "".join(branch_markup),

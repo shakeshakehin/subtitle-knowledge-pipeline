@@ -12,6 +12,7 @@ dependencies = [
   "aiohttp>=3.12",
   "bilibili-api-python>=17.3",
   "langfuse>=4,<5",
+  "opencc-python-reimplemented>=0.1.7",
   "python-dotenv>=1.1",
   "requests>=2.32",
   "video-report-agent",

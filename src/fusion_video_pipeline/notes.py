@@ -30,7 +30,6 @@ SKELETON_SYSTEM_PROMPT = """你是视频知识结构设计师。先完整理解�
 只输出合法 JSON，不要 Markdown 围栏：
 {
   "schema_version": 2,
-  "type": "逻辑型",
   "title": "精炼标题",
   "thesis": "一句话核心命题",
   "term_normalizations": [{
@@ -111,7 +110,6 @@ POPULATE_SYSTEM_PROMPT = """你是视频知识树编辑。用户会提供完整�
 只输出合法 JSON，不要 Markdown 围栏。固定结构：
 {
   "schema_version": 2,
-  "type": "逻辑型",
   "title": "与 skeleton 完全相同",
   "thesis": "与 skeleton 完全相同",
   "outline": [{
@@ -342,7 +340,6 @@ def validate_skeleton(data: dict, valid_ids: set[str]) -> None:
         raise ValueError("skeleton 不是 JSON 对象")
     required = (
         "schema_version",
-        "type",
         "title",
         "thesis",
         "term_normalizations",
@@ -356,8 +353,6 @@ def validate_skeleton(data: dict, valid_ids: set[str]) -> None:
             raise ValueError(f"skeleton 缺少字段 {key}")
     if data["schema_version"] != 2:
         raise ValueError("skeleton.schema_version 必须是 2")
-    if data["type"] != "逻辑型":
-        raise ValueError("skeleton.type 必须固定为逻辑型")
     if not str(data["title"]).strip() or not str(data["thesis"]).strip():
         raise ValueError("skeleton title/thesis 不能为空")
 
@@ -527,7 +522,6 @@ def validate_outline(data: dict, valid_ids: set[str], skeleton: dict | None = No
         raise ValueError("输出不是 JSON 对象")
     required = (
         "schema_version",
-        "type",
         "title",
         "thesis",
         "outline",
@@ -541,8 +535,6 @@ def validate_outline(data: dict, valid_ids: set[str], skeleton: dict | None = No
             raise ValueError(f"缺少字段 {key}")
     if data["schema_version"] != 2:
         raise ValueError("schema_version 必须是 2")
-    if data["type"] != "逻辑型":
-        raise ValueError("type 必须固定为逻辑型")
     if not isinstance(data["outline"], list) or not data["outline"]:
         raise ValueError("outline 不能为空")
     inventory_by_id: dict[str, dict] = {}
@@ -698,6 +690,8 @@ def validate_outline(data: dict, valid_ids: set[str], skeleton: dict | None = No
 
 def normalize_skeleton_response(data: dict) -> dict:
     """Merge exact duplicate terminology rows without making a semantic choice."""
+    if isinstance(data, dict):
+        data.pop("type", None)
     if not isinstance(data, dict) or not isinstance(data.get("term_normalizations"), list):
         return data
     merged: list[dict] = []
@@ -737,6 +731,8 @@ def _enum_key(value: object) -> str:
 
 def normalize_outline_response(data: dict) -> dict:
     """Normalize schema synonyms while leaving genuinely unknown semantics invalid."""
+    if isinstance(data, dict):
+        data.pop("type", None)
     if not isinstance(data, dict) or not isinstance(data.get("outline"), list):
         return data
     for section in data["outline"]:
@@ -1086,7 +1082,6 @@ def render_markdown(data: dict, metadata: dict, output: Path) -> Path:
         "",
         f"> **主旨**：{data['thesis']}",
         "",
-        f"- 类型：{data['type']}",
         f"- 来源：{source}",
         "",
     ]

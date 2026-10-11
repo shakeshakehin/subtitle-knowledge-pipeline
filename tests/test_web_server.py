@@ -52,8 +52,23 @@ def test_history_is_rebuilt_from_persisted_run_directories(tmp_path):
     write_json(
         run / "usage.json",
         {
-            "notes": {"model": "tree-model", "total_tokens": 120, "attempts": 2, "elapsed_seconds": 12},
-            "report": {"model": "report-model", "tokens": 80, "llm_calls": 1, "elapsed_seconds": 20},
+            "notes": {
+                "model": "tree-model",
+                "prompt_tokens": 90,
+                "completion_tokens": 30,
+                "total_tokens": 120,
+                "attempts": 2,
+                "elapsed_seconds": 12,
+            },
+            "report": {
+                "model": "report-model",
+                "prompt_tokens": 60,
+                "completion_tokens": 20,
+                "tokens": 80,
+                "llm_calls": 1,
+                "elapsed_seconds": 20,
+                "llm_cny_estimate": 0.0123,
+            },
         },
     )
     write_json(
@@ -74,19 +89,20 @@ def test_history_is_rebuilt_from_persisted_run_directories(tmp_path):
         assert row["title"] == "历史总结"
         assert row["state"] == "complete"
         assert row["total_tokens"] == 200
+        assert row["prompt_tokens"] == 150
+        assert row["completion_tokens"] == 50
         assert row["calls"] == 3
+        assert row["cost"] == 0.0123
+        assert row["cost_currency"] == "CNY"
         assert row["elapsed_seconds"] == 32
         assert row["thesis"] == "历史主旨"
         assert row["summary"] == ["结论一"]
         assert row["report_engine"] == "efficient"
         assert row["transcript_cache"] == {"status": "hit", "key": "local-test"}
-        assert row["artifacts"]["subtitle"].endswith("/subtitle.txt")
-        assert row["artifacts"]["transcript"].endswith("/transcript.md")
-        assert row["artifacts"]["canonical_transcript"].endswith(
-            "/canonical-transcript.jsonl"
-        )
+        assert set(row["artifacts"]) == {"tree_html", "report_html"}
         assert row["primary_url"].endswith("/tree.html")
         assert manager.history_artifact(run.name, "tree.html") == run / "tree.html"
+        assert manager.history_artifact(run.name, "subtitle.txt") is None
         assert manager.history_artifact(run.name, "../source.info.json") is None
     finally:
         manager.executor.shutdown(wait=False, cancel_futures=True)
@@ -124,6 +140,7 @@ def test_web_ui_contains_live_progress_and_persisted_history_controls():
         / "web_ui.html"
     ).read_text(encoding="utf-8")
     assert 'id="history-list"' in html
+    assert 'id="fusion-language-toggle"' in html
     assert 'id="history-filter"' in html
     assert 'class="progress-track"' in html
     assert "/api/history?limit=60" in html
@@ -132,11 +149,21 @@ def test_web_ui_contains_live_progress_and_persisted_history_controls():
     assert "双击记录查看完整知识树与详细报告" in html
     assert "data-history-open=" in html
     assert "card.addEventListener('dblclick'" in html
-    assert "字幕缓存命中" in html
-    assert "字幕 TXT" in html
+    assert "输入 Tokens" in html
+    assert "输出 Tokens" in html
+    assert "总 Tokens" in html
+    assert "模型请求" in html
+    assert "总耗时" in html
+    assert "已知成本" in html
+    assert "字幕 TXT" not in html
+    assert "旧版完整树" not in html
+    assert "Canonical JSONL" not in html
     assert 'id="api-key-mode"' in html
     assert 'id="shared-api-key"' in html
     assert 'id="new-api-key-field"' in html
+    assert 'type="submit" disabled>正在读取配置' in html
+    assert "configReady=false" in html
+    assert "API：${esc(job.api_key_source" in html
     assert "note_api_key:sharedApiKey" in html
     assert "report_api_key:sharedApiKey" in html
     assert 'id="note-api-key"' not in html
@@ -144,9 +171,8 @@ def test_web_ui_contains_live_progress_and_persisted_history_controls():
     assert 'name="report-engine"' in html
     assert 'value="editorial" checked' in html
     assert "编辑型总结（推荐）" in html
-    assert "report_review:'终稿复核 JSON'" in html
     assert "report_engine:reportEngine" in html
-    assert "现有 Agent 精读（保留）" in html
+    assert "原始 Agent 精读（回退）" in html
 
 
 def test_job_rejects_unknown_report_engine(tmp_path):
@@ -275,6 +301,49 @@ def test_new_official_deepseek_key_can_replace_configured_key_and_be_saved(tmp_p
         manager.executor.shutdown(wait=False, cancel_futures=True)
 
 
+def test_local_legacy_request_prefers_saved_key_over_stale_config(tmp_path):
+    configured = Settings(
+        project_root=tmp_path,
+        note_base_url="https://api.deepseek.com",
+        note_model="deepseek-flash",
+        note_api_key="stale-tree-key",
+        report_provider="deepseek",
+        report_model="deepseek-flash",
+        report_api_key="stale-report-key",
+        obsidian_root=tmp_path / "vault",
+        credential_path=tmp_path / "credential.json",
+    )
+    manager = JobManager(configured)
+
+    class SavedCredential:
+        @staticmethod
+        def available():
+            return True
+
+        @staticmethod
+        def load():
+            return "known-working-saved-key"
+
+    manager.credential_store = SavedCredential()
+    try:
+        requested = manager.request_settings(
+            {
+                "models": {
+                    "note_api_key": "obsolete-request-key",
+                    "report_api_key": "obsolete-request-key",
+                }
+            }
+        )
+        assert requested.note_api_key == "known-working-saved-key"
+        assert requested.report_api_key == "known-working-saved-key"
+        assert (
+            manager._api_key_source({}, allow_saved_api_key=True)
+            == "本机已保存 API（兼容模式）"
+        )
+    finally:
+        manager.executor.shutdown(wait=False, cancel_futures=True)
+
+
 def test_saved_api_key_is_not_available_to_public_unauthenticated_request(tmp_path):
     manager = JobManager(settings(tmp_path), public_mode=True)
     try:
@@ -283,6 +352,38 @@ def test_saved_api_key_is_not_available_to_public_unauthenticated_request(tmp_pa
                 {"models": {"api_key_mode": "saved"}},
                 allow_saved_api_key=False,
             )
+    finally:
+        manager.executor.shutdown(wait=False, cancel_futures=True)
+
+
+def test_public_new_key_still_works_when_save_checkbox_was_stale(tmp_path):
+    configured = Settings(
+        project_root=tmp_path,
+        note_base_url="https://api.deepseek.com",
+        note_model="deepseek-flash",
+        note_api_key="",
+        report_provider="deepseek",
+        report_model="deepseek-flash",
+        report_api_key="",
+        obsidian_root=tmp_path / "vault",
+        credential_path=tmp_path / "credential.json",
+    )
+    manager = JobManager(configured, public_mode=True)
+    try:
+        requested, credential_to_save = manager._request_settings(
+            {
+                "models": {
+                    "api_key_mode": "new",
+                    "note_api_key": "request-only-key",
+                    "report_api_key": "request-only-key",
+                    "save_api_key": True,
+                }
+            },
+            allow_saved_api_key=False,
+        )
+        assert requested.note_api_key == "request-only-key"
+        assert requested.report_api_key == "request-only-key"
+        assert credential_to_save is None
     finally:
         manager.executor.shutdown(wait=False, cancel_futures=True)
 

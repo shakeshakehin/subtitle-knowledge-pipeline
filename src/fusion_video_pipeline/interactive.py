@@ -259,7 +259,7 @@ def render_tree_html(
 .app{{--tree-width:42%;display:grid;grid-template-columns:var(--tree-width) 10px minmax(0,1fr);height:100vh;overflow:hidden}} .app:not(.linked){{display:block;height:auto;min-height:100vh}}
 .tree-pane{{overflow:auto;padding:24px 26px 60px;background:linear-gradient(150deg,#f7f4ee,#eef3f4)}} .app:not(.linked) .tree-pane{{max-width:1280px;margin:auto}}
 .eyebrow{{font-size:12px;letter-spacing:.16em;color:var(--blue);font-weight:800}} h1{{font-size:28px;line-height:1.25;margin:8px 0}} .thesis{{margin:0 0 22px;color:#3c4a52;line-height:1.7}}
-.root-card{{padding:18px 20px;border-radius:16px;background:#173b51;color:#fff;box-shadow:0 10px 26px #173b5122;margin-bottom:18px}} .root-card small{{display:block;margin-top:8px;color:#cfe1ea}}
+.root-card{{padding:14px 18px;border-radius:16px;background:#173b51;color:#cfe1ea;box-shadow:0 10px 26px #173b5122;margin-bottom:18px;line-height:1.6}}
 .branch{{position:relative;margin:0 0 16px 18px;padding-left:22px;border-left:2px solid #9db7c6}} .branch:before{{content:"";position:absolute;left:-2px;top:25px;width:22px;border-top:2px solid #9db7c6}}
 .branch-title,.node-card{{font:inherit;text-align:left;color:inherit;border:0;cursor:default}} button.branch-title,button.node-card{{cursor:pointer}}
 .branch-title{{width:100%;display:flex;justify-content:space-between;gap:14px;align-items:center;padding:12px 14px;border-radius:12px;background:var(--blue);color:#fff;box-shadow:0 6px 16px #1d5f8220}} .branch-title span{{font-weight:800}} .branch-title em{{font-size:12px;font-style:normal;color:#d7edf7;white-space:nowrap}}
@@ -278,7 +278,7 @@ def render_tree_html(
   <div class="eyebrow">FUSION KNOWLEDGE TREE</div>
   <h1>{html.escape(str(outline.get("title") or metadata.get("title") or "知识树"))}</h1>
   <p class="thesis">{html.escape(str(outline.get("thesis") or ""))}</p>
-  <div class="root-card" {root_attrs}><strong>{html.escape(str(outline.get("type") or "知识结构"))}</strong><small>{html.escape(root_note)}</small></div>
+  <div class="root-card" {root_attrs}>{html.escape(root_note)}</div>
   {"".join(branch_markup)}
   {summary_markup}
 </aside>

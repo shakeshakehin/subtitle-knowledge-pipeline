@@ -2,7 +2,7 @@ from fusion_video_pipeline.canonical import SourceUnit
 from fusion_video_pipeline.compact_tree import render_compact_tree_html
 
 
-def test_compact_tree_starts_as_overview_and_keeps_details_on_demand(tmp_path):
+def test_compact_tree_starts_as_overview_without_redundant_detail_popup(tmp_path):
     units = [
         SourceUnit("unit-000001", "第一段", "test", start_ms=10_000, end_ms=20_000),
         SourceUnit("unit-000002", "第二段", "test", start_ms=20_000, end_ms=30_000),
@@ -62,10 +62,13 @@ def test_compact_tree_starts_as_overview_and_keeps_details_on_demand(tmp_path):
     assert 'data-tree-view="next"' in document
     assert 'data-tree-view="all"' in document
     assert 'class="tree-item is-collapsed"' in document
-    assert 'data-child-count="1"' in document
-    assert 'data-detail="完整解释只在选中节点后出现。"' in document
-    assert 'id="detail-panel"' in document
+    assert 'title="展开 1 个下级节点"' in document
+    assert 'data-detail="' not in document
+    assert 'id="detail-panel"' not in document
+    assert "showDetail" not in document
+    assert "if(el.dataset.canLocate==='true')locate(el)" in document
     assert "focusBranch" in document
     assert 'src="report.html"' in document
+    assert "逻辑型" not in document
     assert "不跳转原视频" not in document
     assert "bilibili.com/video" not in document

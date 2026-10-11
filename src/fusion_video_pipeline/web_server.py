@@ -21,49 +21,24 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from .config import Settings
 from .credential_store import ApiCredentialStore, CredentialStoreError
+from .localization import (
+    SUPPORTED_LANGUAGES,
+    convert_html_document,
+    convert_payload,
+    convert_text,
+    language_from_cookie,
+)
 from .obsidian import safe_name
 from .pipeline import FusionPipeline
 
 ARTIFACT_KEYS = (
     "tree_html",
-    "tree_classic_html",
     "report_html",
-    "mindmap",
-    "mindmap_svg",
-    "mindmap_overview",
-    "mindmap_overview_svg",
-    "report_png",
-    "report_plan",
-    "report_document",
-    "report_review",
-    "report_summary",
-    "notes",
-    "subtitle",
-    "transcript",
-    "canonical_transcript",
 )
 
 HISTORY_ARTIFACTS = {
     "tree.html": "tree_html",
-    "tree-classic.html": "tree_classic_html",
     "report.html": "report_html",
-    "mindmap.png": "mindmap",
-    "mindmap.svg": "mindmap_svg",
-    "mindmap-overview.png": "mindmap_overview",
-    "mindmap-overview.svg": "mindmap_overview_svg",
-    "report.png": "report_png",
-    "report-efficient-plan.json": "report_plan",
-    "report-efficient-document.json": "report_document",
-    "report-efficient-summary.json": "report_summary",
-    "report-editorial-plan.json": "report_plan",
-    "report-editorial-document.json": "report_document",
-    "report-editorial-revised.json": "report_document",
-    "report-editorial-review.json": "report_review",
-    "report-editorial-summary.json": "report_summary",
-    "notes.md": "notes",
-    "subtitle.txt": "subtitle",
-    "transcript.md": "transcript",
-    "canonical-transcript.jsonl": "canonical_transcript",
 }
 
 
@@ -252,6 +227,9 @@ class JobManager:
         settings, credential_to_save = self._request_settings(
             payload, allow_saved_api_key=allow_saved_api_key
         )
+        api_key_source = self._api_key_source(
+            payload, allow_saved_api_key=allow_saved_api_key
+        )
         if "tree" in outputs and not settings.note_api_key:
             raise ValueError("生成知识树需要输入新的 API Key，或选择一把已保存的 API Key")
         if "report" in outputs and not settings.report_api_key:
@@ -264,6 +242,7 @@ class JobManager:
             "created_at": now,
             "outputs": sorted(outputs),
             "report_engine": report_engine if "report" in outputs else None,
+            "api_key_source": api_key_source,
             "source_type": source_type,
             "title": title or (Path(source).stem if source_type == "subtitle" else source),
             "progress": 0,
@@ -294,6 +273,38 @@ class JobManager:
             credential_to_save,
         )
         return dict(public_job)
+
+    def _api_key_source(self, payload: dict, *, allow_saved_api_key: bool) -> str:
+        custom = payload.get("models") if isinstance(payload.get("models"), dict) else {}
+        mode = str(custom.get("api_key_mode") or "request").strip().lower()
+        note_base_url = (
+            self.settings.note_base_url
+            if self.public_mode
+            else str(custom.get("note_base_url") or self.settings.note_base_url).rstrip("/")
+        )
+        report_provider = (
+            self.settings.report_provider
+            if self.public_mode
+            else str(custom.get("report_provider") or self.settings.report_provider)
+        )
+        shared_official_deepseek = (
+            report_provider.casefold() == "deepseek"
+            and note_base_url.rstrip("/")
+            in {"https://api.deepseek.com", "https://api.deepseek.com/v1"}
+        )
+        if mode == "saved":
+            return "本机已保存 API"
+        if mode == "new":
+            return "本次输入 API"
+        if (
+            allow_saved_api_key
+            and shared_official_deepseek
+            and self.credential_store.available()
+        ):
+            return "本机已保存 API（兼容模式）"
+        if str(custom.get("note_api_key") or custom.get("report_api_key") or "").strip():
+            return "请求中的 API（兼容模式）"
+        return "服务启动配置"
 
     def request_settings(
         self, payload: dict, *, allow_saved_api_key: bool | None = None
@@ -348,9 +359,7 @@ class JobManager:
             new_key = requested_note_key or requested_report_key
             note_api_key = new_key
             report_api_key = new_key
-            if bool(custom.get("save_api_key")):
-                if not allow_saved_api_key:
-                    raise ValueError("当前访问方式不允许保存 API Key")
+            if bool(custom.get("save_api_key")) and allow_saved_api_key:
                 if not new_key:
                     raise ValueError("请先输入要保存的新 API Key")
                 credential_to_save = new_key
@@ -360,12 +369,20 @@ class JobManager:
             note_api_key = requested_note_key
             report_api_key = requested_report_key
         elif shared_official_deepseek:
-            note_api_key = (
-                requested_note_key or requested_report_key or self.settings.note_api_key
-            )
-            report_api_key = (
-                requested_report_key or requested_note_key or self.settings.report_api_key
-            )
+            # Older/stale local pages did not send an explicit mode and could silently
+            # fall back to an obsolete environment key. Once a DPAPI credential exists,
+            # it is the safe local default; choosing `new` remains the explicit override.
+            if allow_saved_api_key and self.credential_store.available():
+                saved_key = self.credential_store.load()
+                note_api_key = saved_key
+                report_api_key = saved_key
+            else:
+                note_api_key = (
+                    requested_note_key or requested_report_key or self.settings.note_api_key
+                )
+                report_api_key = (
+                    requested_report_key or requested_note_key or self.settings.report_api_key
+                )
         else:
             note_api_key = requested_note_key or self.settings.note_api_key
             report_api_key = requested_report_key or self.settings.report_api_key
@@ -477,13 +494,20 @@ class JobManager:
                 },
             )
         except Exception as exc:
+            error = f"{type(exc).__name__}: {exc}"
+            if "401" in str(exc) or "Unauthorized" in str(exc):
+                source = self.get(job_id).get("api_key_source", "未知来源")
+                error = (
+                    f"DeepSeek API Key 未通过验证（本次使用：{source}）。"
+                    "请切换到本机已保存 API，或重新输入有效的新 API Key。"
+                )
             self._update(
                 job_id,
                 state="failed",
                 stage="失败",
                 finished_at=time.time(),
                 elapsed_seconds=round(time.time() - started, 2),
-                error=f"{type(exc).__name__}: {exc}",
+                error=error,
             )
 
     def _progress(self, job_id: str, event: dict) -> None:
@@ -582,9 +606,23 @@ class JobManager:
             total_tokens = int(notes_usage.get("total_tokens") or 0) + int(
                 report_usage.get("tokens") or 0
             )
+            prompt_tokens = int(notes_usage.get("prompt_tokens") or 0) + int(
+                report_usage.get("prompt_tokens") or 0
+            )
+            completion_tokens = int(notes_usage.get("completion_tokens") or 0) + int(
+                report_usage.get("completion_tokens") or 0
+            )
             calls = int(notes_usage.get("attempts") or 0) + int(
                 report_usage.get("llm_calls") or 0
             )
+            cost = None
+            cost_currency = None
+            if report_usage.get("llm_cny_estimate") is not None:
+                cost = float(report_usage["llm_cny_estimate"])
+                cost_currency = "CNY"
+            elif report_usage.get("llm_usd_estimate") is not None:
+                cost = float(report_usage["llm_usd_estimate"])
+                cost_currency = "USD"
             rows.append(
                 {
                     "id": run_dir.name,
@@ -598,7 +636,11 @@ class JobManager:
                     "created_at": run_dir.stat().st_ctime,
                     "elapsed_seconds": round(elapsed_seconds, 3),
                     "total_tokens": total_tokens,
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
                     "calls": calls,
+                    "cost": cost,
+                    "cost_currency": cost_currency,
                     "reused_generation_tokens": int(
                         reused_generation.get("total_tokens") or 0
                     ),
@@ -645,6 +687,16 @@ class WebHandler(BaseHTTPRequestHandler):
             return "user"
         return session_cookie_role(self.headers.get("Cookie"), self.access)
 
+    def _display_language(self) -> str:
+        requested = (parse_qs(urlparse(self.path).query).get("lang") or [""])[0]
+        if requested in SUPPORTED_LANGUAGES:
+            return requested
+        return language_from_cookie(self.headers.get("Cookie"))
+
+    def _html_bytes(self, path: Path) -> bytes:
+        document = path.read_text(encoding="utf-8")
+        return convert_html_document(document, self._display_language()).encode("utf-8")
+
     def _is_authenticated(self) -> bool:
         return self._access_role() is not None
 
@@ -669,7 +721,8 @@ class WebHandler(BaseHTTPRequestHandler):
         *,
         headers: dict[str, str] | None = None,
     ) -> None:
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        localized = convert_payload(payload, self._display_language())
+        body = json.dumps(localized, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
@@ -702,7 +755,7 @@ class WebHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", "0")
                 self.end_headers()
                 return
-            body = Path(__file__).with_name("login_ui.html").read_bytes()
+            body = self._html_bytes(Path(__file__).with_name("login_ui.html"))
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
@@ -719,7 +772,7 @@ class WebHandler(BaseHTTPRequestHandler):
         if not self._authenticate(api=path.startswith("/api/")):
             return
         if path == "/":
-            body = Path(__file__).with_name("web_ui.html").read_bytes()
+            body = self._html_bytes(Path(__file__).with_name("web_ui.html"))
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
@@ -785,6 +838,14 @@ class WebHandler(BaseHTTPRequestHandler):
                 return
             body = artifact.read_bytes()
             mime = mimetypes.guess_type(artifact.name)[0] or "application/octet-stream"
+            if mime == "text/html":
+                body = convert_html_document(
+                    body.decode("utf-8"), self._display_language()
+                ).encode("utf-8")
+            elif mime == "image/svg+xml":
+                body = convert_text(body.decode("utf-8"), self._display_language()).encode(
+                    "utf-8"
+                )
             self.send_response(HTTPStatus.OK)
             self.send_header(
                 "Content-Type", f"{mime}; charset=utf-8" if mime.startswith("text/") else mime
@@ -813,6 +874,14 @@ class WebHandler(BaseHTTPRequestHandler):
                 return
             body = artifact.read_bytes()
             mime = mimetypes.guess_type(artifact.name)[0] or "application/octet-stream"
+            if mime == "text/html":
+                body = convert_html_document(
+                    body.decode("utf-8"), self._display_language()
+                ).encode("utf-8")
+            elif mime == "image/svg+xml":
+                body = convert_text(body.decode("utf-8"), self._display_language()).encode(
+                    "utf-8"
+                )
             self.send_response(HTTPStatus.OK)
             self.send_header(
                 "Content-Type", f"{mime}; charset=utf-8" if mime.startswith("text/") else mime

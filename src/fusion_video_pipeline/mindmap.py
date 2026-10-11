@@ -282,7 +282,7 @@ def render_svg(data: dict, output: Path) -> Path:
     svg.append(
         f'<text x="{width - MARGIN_X:.0f}" y="{height - 22:.0f}" text-anchor="end" '
         f'font-family="{FONT}" font-size="13" fill="#7e898f">'
-        f'{html.escape(str(data.get("type", "")))} · 深度 {maximum_depth + 1}</text>'
+        f'深度 {maximum_depth + 1}</text>'
     )
     svg.append("</svg>")
     output.write_text("\n".join(svg), encoding="utf-8")

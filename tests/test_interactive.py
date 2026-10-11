@@ -57,6 +57,7 @@ def test_tree_html_binds_nodes_to_report_ranges_without_video_seek(tmp_path):
     assert "splitter?.addEventListener('pointerdown'" in document
     assert "splitter?.addEventListener('keydown'" in document
     assert "setSplit(42)" in document
+    assert "逻辑型" not in document
     assert "不跳转原视频" in document
     assert "bilibili.com/video" not in document
     report = (tmp_path / "report.html").read_text(encoding="utf-8")
