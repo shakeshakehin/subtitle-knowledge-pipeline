@@ -1,4 +1,4 @@
-# Subtitle Knowledge Pipeline
+# Subtitle Knowledge Pipeline · V10
 
 把 B 站现成 CC 字幕或本地字幕转换为两种互补成果：用于快速浏览的层级知识树，以及用于深入阅读的详细报告。知识树是本项目的核心；详细报告通过外部项目 [`video-report-agent`](https://github.com/imexlovery/video-report-agent) 接入。
 

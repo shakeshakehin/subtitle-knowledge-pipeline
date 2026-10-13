@@ -385,6 +385,14 @@ def test_conflicting_term_normalizations_still_fail_validation():
         validate_skeleton(normalized, {"unit-000001"})
 
 
+def test_skeleton_benefit_kind_is_normalized_without_an_llm_retry():
+    data = sample_skeleton()
+    data["content_inventory"][0]["kind"] = " Benefit "
+    normalized = normalize_skeleton_response(data)
+    assert normalized["content_inventory"][0]["kind"] == "claim"
+    validate_skeleton(normalized, {"unit-000001"})
+
+
 def test_markdown_keeps_source_ids_internal(tmp_path):
     data = sample_outline()
     output = render_markdown(
@@ -406,6 +414,65 @@ def test_outline_schema_synonyms_are_normalized_before_validation():
     assert point["kind"] == "explanation"
     assert point["relation_to_parent"] == "definition"
     validate_outline(data, {"unit-000001"}, sample_skeleton())
+
+
+def test_outline_relation_synonyms_are_normalized_without_an_llm_retry():
+    data = sample_outline()
+    caveat = data["outline"][0]["points"][1]
+    caveat["relation_to_parent"] = "caveat"
+    conclusion = data["outline"][1]["points"][1]
+    conclusion["relation_to_parent"] = "conclusion"
+
+    normalize_outline_response(data)
+
+    assert caveat["relation_to_parent"] == "limitation"
+    assert conclusion["relation_to_parent"] == "explanation"
+    validate_outline(data, {"unit-000001"}, sample_skeleton())
+
+
+def test_overlong_outline_text_is_compacted_and_original_is_retained():
+    data = sample_outline()
+    point = data["outline"][0]["points"][1]
+    original_title = "这是一个为了测试知识树视觉密度而故意写得非常非常长的节点标题标题标题标题"
+    original_detail = (
+        "这一段先解释子任务的正常关闭与资源释放。"
+        "随后继续说明恢复任务时会保留历史和相关配置，但不保证外部进程也能恢复，"
+        "因此这里特意把文字写到超过知识树允许的一百个字符，以验证本地脚本会压缩展示文本而不是再次请求模型。"
+    )
+    point["title"] = original_title
+    point["detail"] = original_detail
+
+    normalize_outline_response(data)
+
+    assert len(point["title"]) <= 32
+    assert len(point["detail"]) <= 100
+    assert point["full_title"] == original_title
+    assert point["full_detail"] == original_detail
+    validate_outline(data, {"unit-000001"}, sample_skeleton())
+
+
+def test_locked_branch_sources_are_restored_without_an_llm_retry():
+    skeleton = sample_skeleton()
+    skeleton["branches"][2]["source_units"] = ["unit-000001", "unit-000002"]
+    data = sample_outline()
+
+    normalized = normalize_outline_response(data, skeleton)
+
+    assert normalized["outline"][2]["source_units"] == ["unit-000001", "unit-000002"]
+    validate_outline(normalized, {"unit-000001", "unit-000002"}, skeleton)
+
+
+def test_locked_branch_sources_are_not_restored_when_branch_identity_changed():
+    skeleton = sample_skeleton()
+    skeleton["branches"][0]["source_units"] = ["unit-000001", "unit-000002"]
+    data = sample_outline()
+    data["outline"][0]["id"] = "unexpected-branch"
+
+    normalize_outline_response(data, skeleton)
+
+    assert data["outline"][0]["source_units"] == ["unit-000001"]
+    with pytest.raises(ValueError, match="保持 skeleton"):
+        validate_outline(data, {"unit-000001", "unit-000002"}, skeleton)
 
 
 def test_unknown_outline_semantics_still_fail_after_normalization():

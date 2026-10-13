@@ -202,7 +202,7 @@ class PipelineTelemetry:
                     secret_key=settings.langfuse_secret_key,
                     base_url=settings.langfuse_base_url,
                     environment=settings.langfuse_environment,
-                    release="0.1.0",
+                    release="10.0.0",
                     timeout=10,
                 )
                 _CLIENTS[cache_key] = client

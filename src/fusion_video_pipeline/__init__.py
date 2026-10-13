@@ -1,3 +1,3 @@
 """Fusion video pipeline."""
 
-__version__ = "0.1.0"
+__version__ = "10.0.0"

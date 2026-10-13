@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fusion-video-pipeline"
-version = "0.1.0"
-description = "One canonical transcript to v7 tree notes and a visual HTML report"
+version = "10.0.0"
+description = "One canonical transcript to hierarchical tree notes and a visual HTML report"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [

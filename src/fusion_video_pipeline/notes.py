@@ -208,6 +208,12 @@ INVENTORY_KINDS = {
     "caveat",
     "conclusion",
 }
+INVENTORY_KIND_ALIASES = {
+    # A benefit is still a claim in the inventory ledger.  Normalizing this
+    # harmless schema synonym avoids paying for a full skeleton retry while
+    # leaving the statement and its source citations unchanged.
+    "benefit": "claim",
+}
 RELATION_TYPES = {
     "branch_claim",
     "component",
@@ -272,6 +278,8 @@ RELATION_ALIASES = {
     "constraint": "limitation",
     "boundary": "limitation",
     "risk": "limitation",
+    "caveat": "limitation",
+    "conclusion": "explanation",
     "观点": "branch_claim",
     "组成": "component",
     "定义": "definition",
@@ -565,8 +573,11 @@ def validate_outline(data: dict, valid_ids: set[str], skeleton: dict | None = No
             branch = skeleton["branches"][section_index - 1]
             if section.get("id") != branch["id"] or section["heading"] != branch["heading"]:
                 raise ValueError(f"{label} 必须保持 skeleton 的 id、顺序和 heading")
-            if not set(branch["source_units"]).issubset(set(section["source_units"])):
-                raise ValueError(f"{label} 丢失了 skeleton 的代表来源")
+            missing_sources = set(branch["source_units"]) - set(section["source_units"])
+            if missing_sources:
+                raise ValueError(
+                    f"{label} 丢失了 skeleton 的代表来源：{sorted(missing_sources)}"
+                )
             allowed_inventory = branch_inventory[branch["id"]]
         known: dict[str, int] = {}
         for point_index, point in enumerate(section["points"], 1):
@@ -689,39 +700,54 @@ def validate_outline(data: dict, valid_ids: set[str], skeleton: dict | None = No
 
 
 def normalize_skeleton_response(data: dict) -> dict:
-    """Merge exact duplicate terminology rows without making a semantic choice."""
+    """Normalize harmless schema variants without making a semantic choice."""
     if isinstance(data, dict):
         data.pop("type", None)
-    if not isinstance(data, dict) or not isinstance(data.get("term_normalizations"), list):
+    if not isinstance(data, dict):
         return data
-    merged: list[dict] = []
-    by_raw: dict[str, dict] = {}
-    conflicts: list[dict] = []
-    for term in data["term_normalizations"]:
-        if not isinstance(term, dict):
-            merged.append(term)
-            continue
-        raw_key = re.sub(r"\s+", "", str(term.get("raw") or "")).casefold()
-        normalized_key = re.sub(r"[\W_]+", "", str(term.get("normalized") or "")).casefold()
-        previous = by_raw.get(raw_key)
-        if not raw_key or previous is None:
-            copied = dict(term)
-            merged.append(copied)
-            if raw_key:
-                by_raw[raw_key] = copied
-            continue
-        previous_key = re.sub(r"[\W_]+", "", str(previous.get("normalized") or "")).casefold()
-        if normalized_key != previous_key:
-            conflicts.append(term)
-            continue
-        sources = [
-            source
-            for source in [*(previous.get("source_units") or []), *(term.get("source_units") or [])]
-            if source
-        ]
-        previous["source_units"] = list(dict.fromkeys(sources))[:2]
-    # Keep conflicting alternatives so the semantic validator still rejects them.
-    data["term_normalizations"] = [*merged, *conflicts]
+    if isinstance(data.get("term_normalizations"), list):
+        merged: list[dict] = []
+        by_raw: dict[str, dict] = {}
+        conflicts: list[dict] = []
+        for term in data["term_normalizations"]:
+            if not isinstance(term, dict):
+                merged.append(term)
+                continue
+            raw_key = re.sub(r"\s+", "", str(term.get("raw") or "")).casefold()
+            normalized_key = re.sub(
+                r"[\W_]+", "", str(term.get("normalized") or "")
+            ).casefold()
+            previous = by_raw.get(raw_key)
+            if not raw_key or previous is None:
+                copied = dict(term)
+                merged.append(copied)
+                if raw_key:
+                    by_raw[raw_key] = copied
+                continue
+            previous_key = re.sub(
+                r"[\W_]+", "", str(previous.get("normalized") or "")
+            ).casefold()
+            if normalized_key != previous_key:
+                conflicts.append(term)
+                continue
+            sources = [
+                source
+                for source in [
+                    *(previous.get("source_units") or []),
+                    *(term.get("source_units") or []),
+                ]
+                if source
+            ]
+            previous["source_units"] = list(dict.fromkeys(sources))[:2]
+        # Keep conflicting alternatives so the semantic validator still rejects them.
+        data["term_normalizations"] = [*merged, *conflicts]
+
+    if isinstance(data.get("content_inventory"), list):
+        for item in data["content_inventory"]:
+            if not isinstance(item, dict):
+                continue
+            kind_key = _enum_key(item.get("kind"))
+            item["kind"] = INVENTORY_KIND_ALIASES.get(kind_key, kind_key)
     return data
 
 
@@ -729,15 +755,59 @@ def _enum_key(value: object) -> str:
     return re.sub(r"[\s\-]+", "_", str(value or "").strip()).casefold()
 
 
-def normalize_outline_response(data: dict) -> dict:
-    """Normalize schema synonyms while leaving genuinely unknown semantics invalid."""
+def _compact_display_text(value: object, limit: int) -> tuple[str, str | None]:
+    """Fit model prose to a display limit without spending another LLM request.
+
+    Prefer a complete clause when one ends reasonably close to the limit.  The
+    original wording is returned separately so callers can retain it for audit
+    and future non-visual uses.
+    """
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    if len(text) <= limit:
+        return text, None
+
+    candidate = text[:limit]
+    clause_ends = list(re.finditer(r"[。；;！!？?]", candidate))
+    if clause_ends and clause_ends[-1].end() >= max(1, int(limit * 0.6)):
+        compact = candidate[: clause_ends[-1].end()].rstrip()
+    else:
+        compact = text[: limit - 1].rstrip("，,、：:；;。.!！？? ") + "…"
+    return compact[:limit], text
+
+
+def normalize_outline_response(data: dict, skeleton: dict | None = None) -> dict:
+    """Normalize deterministic population omissions and known schema synonyms.
+
+    A populated branch is required to retain the representative source IDs from
+    its already-locked skeleton branch.  Restoring those IDs is mechanical when
+    the branch identity and heading still match, so it must not consume another
+    model request.  A reordered or renamed branch remains ambiguous and is left
+    untouched for the validator to reject.
+    """
     if isinstance(data, dict):
         data.pop("type", None)
     if not isinstance(data, dict) or not isinstance(data.get("outline"), list):
         return data
-    for section in data["outline"]:
+    skeleton_branches = skeleton.get("branches") if isinstance(skeleton, dict) else None
+    for section_index, section in enumerate(data["outline"]):
         if not isinstance(section, dict) or not isinstance(section.get("points"), list):
             continue
+        if isinstance(skeleton_branches, list) and section_index < len(skeleton_branches):
+            branch = skeleton_branches[section_index]
+            if (
+                isinstance(branch, dict)
+                and section.get("id") == branch.get("id")
+                and section.get("heading") == branch.get("heading")
+                and isinstance(branch.get("source_units"), list)
+            ):
+                current_sources = (
+                    section.get("source_units")
+                    if isinstance(section.get("source_units"), list)
+                    else []
+                )
+                section["source_units"] = list(
+                    dict.fromkeys([*current_sources, *branch["source_units"]])
+                )
         for point in section["points"]:
             if not isinstance(point, dict):
                 continue
@@ -753,6 +823,19 @@ def normalize_outline_response(data: dict) -> dict:
             if kind not in POINT_KINDS and relation in RELATION_DEFAULT_KIND:
                 kind = RELATION_DEFAULT_KIND[relation]
             point["kind"] = kind
+
+            title, full_title = _compact_display_text(
+                point.get("title") or point.get("text"), 32
+            )
+            detail, full_detail = _compact_display_text(
+                point.get("detail") or point.get("text"), 100
+            )
+            point["title"] = title
+            point["detail"] = detail
+            if full_title is not None:
+                point.setdefault("full_title", full_title)
+            if full_detail is not None:
+                point.setdefault("full_detail", full_detail)
     return data
 
 
@@ -1034,7 +1117,7 @@ def generate_outline(
             stage="内容挂载",
             max_tokens=32768,
             timeout=timeout,
-            normalizer=normalize_outline_response,
+            normalizer=lambda data: normalize_outline_response(data, skeleton),
             progress=progress,
             progress_percent=62,
             telemetry=telemetry,
